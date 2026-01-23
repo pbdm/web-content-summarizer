@@ -16,7 +16,7 @@ try:
 except ImportError:
     FunASRTranscriber = None
 from src.formatter import MarkdownFormatter
-from src.config import OUTPUT_DIR, TEMP_DIR
+from src.config import OUTPUT_DIR, TEMP_DIR, OBSIDIAN_VAULT_PATH
 
 def main():
     parser = argparse.ArgumentParser(description="BiliTranscribe: Download and transcribe Bilibili videos to Markdown.")
@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--model", default="large-v3", help="Whisper model size (default: large-v3)")
     parser.add_argument("--keep-audio", action="store_true", help="Keep the intermediate WAV audio file")
     parser.add_argument("--engine", choices=["whisper", "funasr"], default="whisper", help="ASR engine to use (default: whisper)")
+    parser.add_argument("--obsidian-vault", default=OBSIDIAN_VAULT_PATH, help=f"Path to Obsidian vault (default: {OBSIDIAN_VAULT_PATH})")
     
     args = parser.parse_args()
 
@@ -57,11 +58,22 @@ def main():
         segments = transcriber.transcribe(audio_path)
 
         # 4. 生成 Markdown
-        # 准备输出路径
-        # 在 output 目录下创建一个以视频标题命名的子文件夹，或者直接放文件？
-        # 这里直接放文件到 output 目录
         md_filename = f"{video_title}_{args.engine}.md"
-        md_path = OUTPUT_DIR / md_filename
+        
+        # 确定输出路径
+        if args.obsidian_vault:
+            vault_path = Path(args.obsidian_vault)
+            if not vault_path.exists():
+                print(f"Warning: Obsidian vault path {vault_path} does not exist. Falling back to default output.")
+                md_path = OUTPUT_DIR / md_filename
+            else:
+                # 在 Vault 中创建 BiliInbox 文件夹
+                inbox_dir = vault_path / "BiliInbox"
+                inbox_dir.mkdir(exist_ok=True)
+                md_path = inbox_dir / md_filename
+                print(f"📂 Obsidian Mode: Saving note to {md_path}")
+        else:
+            md_path = OUTPUT_DIR / md_filename
         
         # 由于 segments 是生成器，我们需要遍历它写入文件
         # 为了给用户即时反馈，我们可以边读边写，或者先收集
@@ -69,10 +81,15 @@ def main():
         formatter.save(segments, md_path, title=video_title, source_url=args.url)
 
         # 5. 整理文件 (Finalize)
-        # 将视频文件移动到 output 目录
+        # 将视频文件移动到 output 目录 (视频通常不放 Obsidian)
         final_video_path = OUTPUT_DIR / video_path.name
-        shutil.move(str(video_path), str(final_video_path))
-        print(f"Video moved to: {final_video_path}")
+        
+        # 只有当源文件不在 output 目录时才移动
+        if video_path.resolve() != final_video_path.resolve():
+            shutil.move(str(video_path), str(final_video_path))
+            print(f"Video moved to: {final_video_path}")
+        else:
+            print(f"Video already in output: {final_video_path}")
 
         # 清理音频
         if not args.keep_audio:

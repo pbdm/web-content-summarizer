@@ -11,6 +11,11 @@ class AudioExtractor:
         # 输出音频路径 (同名，但后缀为 .wav)
         output_path = video_path.with_suffix('.wav')
         
+        # 检查是否已存在
+        if output_path.exists() and output_path.stat().st_size > 0:
+            print(f"Using existing audio file: {output_path.name}")
+            return output_path
+        
         print(f"Extracting audio to: {output_path.name}...")
 
         # 构建 ffmpeg 命令

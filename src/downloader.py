@@ -1,6 +1,6 @@
 import yt_dlp
 from pathlib import Path
-from .config import TEMP_DIR, FFMPEG_PATH
+from .config import TEMP_DIR, OUTPUT_DIR, FFMPEG_PATH
 
 class VideoDownloader:
     def __init__(self):
@@ -17,25 +17,46 @@ class VideoDownloader:
     def download(self, url: str) -> Path:
         """
         下载视频并返回本地文件路径。
+        如果视频已在 output/ 目录存在，则直接返回该路径。
         """
-        print(f"Downloading video from: {url}...")
+        print(f"Analyzing URL: {url}...")
         
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            # 获取生成的文件名
-            filename = ydl.prepare_filename(info)
+            # 1. 预先获取信息，不下载
+            info = ydl.extract_info(url, download=False)
             
-            # yt-dlp 可能会修改扩展名（例如合并后变为 mp4），我们需要找到实际存在的文件
-            # 如果是合并操作，文件名后缀可能会变
+            # 预测文件名
+            # 注意：prepare_filename 返回的是模板生成的文件名，
+            # 如果配置了 merge_output_format='mp4'，后缀最终会变成 mp4
+            # 但 prepare_filename 可能返回 .webm 或 .m4a
+            # 我们主要关心文件名主体 (title)
+            temp_filename = ydl.prepare_filename(info)
+            temp_path = Path(temp_filename)
+            
+            # 强制修正后缀为 mp4 (因为我们设置了 merge_output_format)
+            # 同时也检查原始后缀，以防万一
+            potential_filenames = [temp_path.name, temp_path.with_suffix('.mp4').name]
+            
+            # 2. 检查 Output 目录是否存在
+            for fname in potential_filenames:
+                final_path = OUTPUT_DIR / fname
+                if final_path.exists():
+                    print(f"Found existing video in output: {final_path.name}")
+                    return final_path
+
+            # 3. 如果没找到，开始下载
+            print(f"Downloading video...")
+            error_code = ydl.download([url])
+            
+            # 下载后的路径检查 (逻辑同上)
             if info.get('requested_downloads'):
-                # 尝试获取合并后的文件名
                 filename = info['requested_downloads'][0]['filepath']
+            else:
+                filename = ydl.prepare_filename(info)
             
-            # 简单的修正：如果文件名是 .webm 结尾但我们强制合并为 mp4，yt-dlp 可能会返回 .mp4
-            # 这里我们直接返回 path 对象
             filepath = Path(filename)
             
-            # 如果合并发生，扩展名可能已经改变，重新检查
+            # 修正：如果文件不存在，可能是合并成了 mp4
             if not filepath.exists():
                 filepath = filepath.with_suffix('.mp4')
             

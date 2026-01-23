@@ -1,8 +1,22 @@
 import os
+import json
 from pathlib import Path
 
 # 项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
+
+# 配置文件
+CONFIG_FILE = PROJECT_ROOT / "config.json"
+OBSIDIAN_VAULT_PATH = None
+
+# 尝试加载配置
+if CONFIG_FILE.exists():
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+            OBSIDIAN_VAULT_PATH = config_data.get("obsidian_vault_path")
+    except Exception as e:
+        print(f"Warning: Failed to load config.json: {e}")
 
 # 目录配置
 BIN_DIR = PROJECT_ROOT / "bin"

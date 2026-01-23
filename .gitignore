@@ -10,6 +10,7 @@ temp/
 bin/ffmpeg
 bin/ffprobe
 output/
+config.json
 *.mp4
 *.mp3
 *.wav
