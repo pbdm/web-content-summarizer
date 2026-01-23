@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/home/bopeng/c/BiliTranscribe/src/main.py", line 51, in main
+    md_filename = f"{video_title}.md"
+  File "/home/bopeng/c/BiliTranscribe/src/formatter.py", line 28, in save
+    for segment in segments:
+  File "/home/bopeng/c/BiliTranscribe/venv/lib/python3.12/site-packages/faster_whisper/transcribe.py", line 1851, in restore_speech_timestamps
+    for segment in segments:
+  File "/home/bopeng/c/BiliTranscribe/venv/lib/python3.12/site-packages/faster_whisper/transcribe.py", line 1190, in generate_segments
+    encoder_output = self.encode(segment)
+                     ^^^^^^^^^^^^^^^^^^^^
+  File "/home/bopeng/c/BiliTranscribe/venv/lib/python3.12/site-packages/faster_whisper/transcribe.py", line 1400, in encode
+    return self.model.encode(features, to_cpu=to_cpu)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Library libcublas.so.12 is not found or cannot be loaded
+Downloading video from: https://www.bilibili.com/video/BV1F7m6Y6EAQ/...
+Download complete: 【深度】基金套利从入门到精通（不止挣零花钱）.mp4
+Extracting audio to: 【深度】基金套利从入门到精通（不止挣零花钱）.wav...
+Loading Whisper model 'large-v3' on cuda (float16)...
+Transcribing 【深度】基金套利从入门到精通（不止挣零花钱）.wav...
+Detected language 'zh' with probability 1
+Saving markdown to /home/bopeng/c/BiliTranscribe/output/【深度】基金套利从入门到精通（不止挣零花钱）.md...
+
+❌ Error: Library libcublas.so.12 is not found or cannot be loaded

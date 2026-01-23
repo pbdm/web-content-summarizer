@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Project specific
+temp/
+bin/ffmpeg
+bin/ffprobe
+output/
+*.mp4
+*.mp3
+*.wav
