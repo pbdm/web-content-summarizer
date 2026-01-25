@@ -3,11 +3,12 @@ import datetime
 
 class MarkdownFormatter:
     def _format_timestamp(self, seconds: float) -> str:
-        td = datetime.timedelta(seconds=seconds)
-        s = str(td).split(".")[0]
-        if s.startswith("0:"):
-            s = "0" + s
-        return s
+        """将秒数转换为 HH:MM:SS 格式"""
+        total_seconds = int(seconds)
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        secs = total_seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
     def save(self, segments, output_path: Path, title: str, source_url: str):
         print(f"Saving markdown to {output_path}...")
