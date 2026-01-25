@@ -39,3 +39,4 @@ if not FFMPEG_PATH.exists():
 DEFAULT_MODEL_SIZE = "large-v3"
 DEFAULT_DEVICE = "cuda"  # 用户有 NVIDIA GPU
 DEFAULT_COMPUTE_TYPE = "float16" # 或者 'int8_float16' 
+DEFAULT_NUM_WORKERS = 1

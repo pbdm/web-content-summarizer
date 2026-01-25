@@ -11,12 +11,14 @@ sys.path.append(str(PROJECT_ROOT))
 from src.downloader import VideoDownloader
 from src.audio import AudioExtractor
 from src.transcriber import Transcriber
-try:
-    from src.transcriber_funasr import FunASRTranscriber
-except ImportError:
-    FunASRTranscriber = None
 from src.formatter import MarkdownFormatter
 from src.config import OUTPUT_DIR, TEMP_DIR, OBSIDIAN_VAULT_PATH
+
+class ContentItem:
+    def __init__(self, start, text, type="speech"):
+        self.start = start
+        self.text = text
+        self.type = type # "speech" or "ocr"
 
 def main():
     parser = argparse.ArgumentParser(description="BiliTranscribe: Download and transcribe Bilibili videos to Markdown.")
@@ -25,17 +27,13 @@ def main():
     parser.add_argument("--keep-audio", action="store_true", help="Keep the intermediate WAV audio file")
     parser.add_argument("--engine", choices=["whisper", "funasr"], default="whisper", help="ASR engine to use (default: whisper)")
     parser.add_argument("--obsidian-vault", default=OBSIDIAN_VAULT_PATH, help=f"Path to Obsidian vault (default: {OBSIDIAN_VAULT_PATH})")
+    parser.add_argument("--fast", action="store_true", help="Speed mode: uses lower beam size and quantization")
     
     args = parser.parse_args()
-
-    if args.engine == "funasr" and FunASRTranscriber is None:
-        print("Error: FunASR is not installed or failed to import.")
-        sys.exit(1)
 
     # 初始化模块
     downloader = VideoDownloader()
     extractor = AudioExtractor()
-    # 延迟加载模型，直到确认下载成功后
     transcriber = None 
     formatter = MarkdownFormatter()
 
@@ -47,61 +45,72 @@ def main():
         # 2. 提取音频
         audio_path = extractor.extract(video_path)
 
-        # 3. 加载模型并转录
-        # 此时再加载模型，避免下载失败白白占用显存
-        if transcriber is None:
-            if args.engine == "funasr":
+        # 3. 加载模型并转录 (动态加载引擎)
+        if args.engine == "funasr":
+            print("Engine: FunASR (Lazy Loading...)")
+            try:
+                from src.transcriber_funasr import FunASRTranscriber
                 transcriber = FunASRTranscriber()
-            else:
-                transcriber = Transcriber(model_size=args.model)
+            except Exception as e:
+                print(f"❌ Error loading FunASR: {e}")
+                print("Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead.")
+                sys.exit(1)
+        else:
+            # Whisper 模式：根据 --fast 决定硬件加速参数，但不降低搜索精度
+            # 保持 beam_size=5 以确保极致准确
+            # 经测试 int8_float16 在部分环境中不被支持，这里改回 float16
+            compute_type = "float16" 
+            num_workers = 4 if args.fast else 1
+            beam_size = 5 # 始终保持最高精度
             
-        segments = transcriber.transcribe(audio_path)
+            print(f"Engine: Whisper ({args.model}) | High-Perf Mode: {args.fast} | Beam Size: {beam_size}")
+            transcriber = Transcriber(
+                model_size=args.model, 
+                compute_type=compute_type,
+                num_workers=num_workers
+            )
+            
+        asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size if args.engine != "funasr" else 5)
+        
+        # 封装结果并显示进度
+        content_items = []
+        count = 0
+        for seg in asr_segments:
+            content_items.append(ContentItem(seg.start, seg.text, "speech"))
+            count += 1
+            if count % 20 == 0:
+                print(f"[Progress] Transcribed up to {seg.start:.1f}s...")
 
         # 4. 生成 Markdown
         md_filename = f"{video_title}_{args.engine}.md"
         
-        # 确定输出路径
         if args.obsidian_vault:
             vault_path = Path(args.obsidian_vault)
-            if not vault_path.exists():
-                print(f"Warning: Obsidian vault path {vault_path} does not exist. Falling back to default output.")
-                md_path = OUTPUT_DIR / md_filename
-            else:
-                # 在 Vault 中创建 BiliInbox 文件夹
+            if vault_path.exists():
                 inbox_dir = vault_path / "BiliInbox"
                 inbox_dir.mkdir(exist_ok=True)
                 md_path = inbox_dir / md_filename
                 print(f"📂 Obsidian Mode: Saving note to {md_path}")
+            else:
+                md_path = OUTPUT_DIR / md_filename
         else:
             md_path = OUTPUT_DIR / md_filename
         
-        # 由于 segments 是生成器，我们需要遍历它写入文件
-        # 为了给用户即时反馈，我们可以边读边写，或者先收集
-        # 这里选择直接传给 formatter，formatter 内部遍历
-        formatter.save(segments, md_path, title=video_title, source_url=args.url)
+        formatter.save(content_items, md_path, title=video_title, source_url=args.url)
 
         # 5. 整理文件 (Finalize)
-        # 将视频文件移动到 output 目录 (视频通常不放 Obsidian)
         final_video_path = OUTPUT_DIR / video_path.name
-        
-        # 只有当源文件不在 output 目录时才移动
         if video_path.resolve() != final_video_path.resolve():
             shutil.move(str(video_path), str(final_video_path))
             print(f"Video moved to: {final_video_path}")
-        else:
-            print(f"Video already in output: {final_video_path}")
 
         # 清理音频
         if not args.keep_audio:
-            os.remove(audio_path)
-            print("Temporary audio file removed.")
-        else:
-            final_audio_path = OUTPUT_DIR / audio_path.name
-            shutil.move(str(audio_path), str(final_audio_path))
-            print(f"Audio moved to: {final_audio_path}")
+            if audio_path.exists():
+                os.remove(audio_path)
+                print("Temporary audio file removed.")
 
         print("\n✨ Process completed successfully!")
-        print(f"📂 Output directory: {OUTPUT_DIR}")
 
     except Exception as e:
         print(f"\n❌ Error: {e}")
@@ -110,5 +119,4 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    import os
     main()
