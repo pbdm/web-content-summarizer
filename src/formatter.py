@@ -20,16 +20,11 @@ class MarkdownFormatter:
             f.write(f"source: {source_url}\n")
             f.write("tags:\n  - bilibili\n  - transcript\n  - inbox\n")
             f.write("---\n\n")
+            
+            # 2. 写入标题
             f.write(f"# {title}\n\n")
-            f.write("> [!ai]+ AI 整理指令\n")
-            f.write("> 复制以下 Prompt 发送给 ChatGPT/Claude 进行整理：\n")
-            f.write("> \n")
-            f.write("> `请阅读这篇 Bilibili 视频的逐字稿，完成以下任务：`\n")
-            f.write("> `1. 用一句话总结核心观点。`\n")
-            f.write("> `2. 提取 3-5 个关键概念，并解释其在文中的含义。`\n")
-            f.write("> `3. 生成一份层级分明的逻辑大纲。`\n")
-            f.write("> `4. 识别文中提到的任何书籍、工具或重要人物，生成 [[WikiLink]] 格式。`\n\n")
-            f.write("---\n\n")
+            
+            # 3. 写入内容
             for item in segments:
                 item_type = getattr(item, "type", "speech")
                 start_str = self._format_timestamp(item.start)

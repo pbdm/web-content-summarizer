@@ -39,7 +39,7 @@ def main():
 
     try:
         # 1. 下载视频
-        video_path = downloader.download(args.url)
+        video_path, uploader = downloader.download(args.url)
         video_title = video_path.stem
 
         # 2. 提取音频
@@ -82,7 +82,7 @@ def main():
                 print(f"[Progress] Transcribed up to {seg.start:.1f}s...")
 
         # 4. 生成 Markdown
-        md_filename = f"{video_title}_{args.engine}.md"
+        md_filename = f"{uploader}-{video_title}_{args.engine}.md"
         
         if args.obsidian_vault:
             vault_path = Path(args.obsidian_vault)
