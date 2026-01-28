@@ -1,4 +1,4 @@
-# 项目备忘录 (Gemini Context)
+# 项目备忘录 (OpenCode Context)
 
 ## 🚀 启动命令 (One-Liner)
 
@@ -14,7 +14,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages
 
 ## 🧠 Agent Skills
 
-项目现已集成 **Gemini Agent Skill**，可通过以下指令直接触发：
+项目现已集成 **OpenCode Agent Skill**，可通过以下指令直接触发：
 
 - **bili-transcribe**: 自动化下载、音频提取及高精度 ASR 转录。
   - 使用方式：直接在聊天中发送“处理 [BiliURL]”。
@@ -33,11 +33,15 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages
 ## 📁 目录结构
 - `src/`: 源代码
 - `output/`: 视频归档
-- `.gemini/skills/`: 固化的 Agent 专家技能
+- `.opencode/skills/`: 固化的 Agent 专家技能
 - `config.json`: 用户配置 (被 git 忽略)
 - `ASR_BENCHMARK.md`: Whisper 与 FunASR 的详细对比评测
 
 ## 🛠️ 更新日志
+- **2026-01-28**:
+    - 完成从 **Gemini** 到 **OpenCode** 的全面迁移。
+    - 迁移所有技能配置至 `.opencode/skills/`。
+    - 更新 `AGENTS.md` 以反映最新的架构和命名。
 - **2026-01-27**:
     - 创建并固化 **bili-transcribe** skill，实现 ASR 流程的标准化。
     - 优化 ASR 自动化脚本，支持 `venv` 自动检测。
