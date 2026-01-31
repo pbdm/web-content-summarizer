@@ -30,21 +30,22 @@ def main():
     
     args = parser.parse_args()
 
-    # 初始化模块
-    downloader = VideoDownloader()
+    # 初始化模块 (默认为纯音频模式)
+    downloader = VideoDownloader(audio_only=True)
     extractor = AudioExtractor()
     transcriber = None 
     formatter = MarkdownFormatter()
 
     try:
-        # 1. 下载视频
-        video_path, uploader = downloader.download(args.url)
-        video_title = video_path.stem
+        # 1. 下载 (Audio)
+        media_path, uploader = downloader.download(args.url)
+        video_title = media_path.stem
 
-        # 2. 提取音频
-        audio_path = extractor.extract(video_path)
+        # 2. 转换/标准化音频 (Convert to 16k wav)
+        # 即使下载的是音频，我们也通过这一步将其统一为 Whisper 最佳的 16k mono wav
+        audio_path = extractor.extract(media_path)
 
-        # 3. 加载模型并转录 (动态加载引擎)
+        # 3. 加载模型并转录
         beam_size = 5 # Default beam size
         if args.engine == "funasr":
             print("Engine: FunASR (Lazy Loading...)")
@@ -56,12 +57,10 @@ def main():
                 print("Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead.")
                 sys.exit(1)
         else:
-            # Whisper 模式：根据 --fast 决定硬件加速参数，但不降低搜索精度
-            # 保持 beam_size=5 以确保极致准确
-            # 经测试 int8_float16 在部分环境中不被支持，这里改回 float16
+            # Whisper 模式
             compute_type = "float16" 
             num_workers = 4 if args.fast else 1
-            beam_size = 5 # 始终保持最高精度
+            beam_size = 5 
             
             print(f"Engine: Whisper ({args.model}) | High-Perf Mode: {args.fast} | Beam Size: {beam_size}")
             transcriber = Transcriber(
@@ -70,12 +69,10 @@ def main():
                 num_workers=num_workers
             )
             
-        if args.engine == "funasr":
-            asr_segments = transcriber.transcribe(audio_path)
-        else:
-            asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
+        # 统一接口调用
+        asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
         
-        # 封装结果并显示进度
+        # 封装结果
         content_items = []
         count = 0
         for seg in asr_segments:
@@ -84,7 +81,7 @@ def main():
             if count % 20 == 0:
                 print(f"[Progress] Transcribed up to {seg.start:.1f}s...")
 
-        # 4. 生成原始 Markdown (保存到本地临时目录)
+        # 4. 生成原始 Markdown
         md_filename = f"{uploader}-{video_title}_{args.engine}.md"
         local_md_path = LOCAL_TRANSCRIPT_DIR / md_filename
         
@@ -94,13 +91,13 @@ def main():
         # 关键：打印特定的成功标识，供 Agent 识别
         print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
 
-        # 5. 整理文件 (Finalize)
-        final_video_path = OUTPUT_DIR / video_path.name
-        if video_path.resolve() != final_video_path.resolve():
-            shutil.move(str(video_path), str(final_video_path))
-            print(f"Video moved to: {final_video_path}")
+        # 5. 清理文件
+        # 清理下载的源文件 (通常是 .m4a 或 .webm)
+        if media_path.exists() and media_path.resolve() != audio_path.resolve():
+            os.remove(media_path)
+            # print("Source media file removed.")
 
-        # 清理音频
+        # 清理转换后的 wav 文件 (除非指定保留)
         if not args.keep_audio:
             if audio_path.exists():
                 os.remove(audio_path)

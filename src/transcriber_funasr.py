@@ -25,9 +25,10 @@ class FunASRTranscriber:
             device=device
         )
 
-    def transcribe(self, audio_path: Path):
+    def transcribe(self, audio_path: Path, **kwargs):
         """
         转录音频文件，返回 Segment 列表。
+        kwargs: 接收额外参数（如 beam_size）以保持接口统一，但在 FunASR 中可能会被忽略。
         """
         print(f"Transcribing {audio_path.name} with FunASR...")
         
