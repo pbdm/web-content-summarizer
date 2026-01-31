@@ -1,66 +1,63 @@
-# BiliTranscribe
+# BiliTranscribe (OpenCode Agent Skill)
 
-一个基于 Python 的 CLI 工具，用于下载 Bilibili 视频，提取音频，并支持使用 **OpenAI Whisper** (默认) 或 **阿里 FunASR** 生成带时间戳的 Markdown 笔记。
-
-专为知识管理打造，支持一键将笔记导入 **Obsidian**，并生成“点击即跳转”的时间戳链接。
+一个专为 **OpenCode Agent** 打造的自动化工具，用于下载 Bilibili 视频/音频，提取高精度 ASR 文稿，并利用 Agent 的认知能力生成结构化的 Obsidian 知识笔记。
 
 ## ✨ 核心特性
 
+- **Agent 驱动的智能总结**:
+  - 不仅仅是转录，更通过 LLM (Agent) 将冗长的文稿转化为结构清晰、逻辑严密的知识笔记。
+  - 内置专家级 Prompt (`.opencode/skills/bili-transcribe/PROMPT.md`)，自动提取核心观点、实操建议和风险提示。
+- **极速 Audio-Only 模式**:
+  - 默认仅下载最佳音质的音频流，无需下载巨大的视频文件，带宽占用极低，处理速度飞快。
 - **双引擎转录**: 
-  - `whisper`: (默认) 数字/日期格式化完美，排版整洁，适合财经/科技类内容。
-  - `funasr`: (阿里达摩院) 中文专有名词（人名、机构名）识别精准，适合国内新闻/访谈。
+  - `whisper` (默认): `large-v3` 模型加持，数字/日期格式化完美，适合泛知识类内容。
+  - `funasr` (阿里达摩院): 对中文专有名词识别精准，适合特定领域。
 - **Obsidian 深度集成**: 
-  - 生成包含 YAML Frontmatter 的笔记。
-  - **时间戳跳转**: 点击笔记中的时间戳 `[05:30]`，浏览器自动跳转到 B 站对应秒数。
-  - 自动归档到你的 Obsidian Vault 指定目录。
-- **智能去重**: 自动检测已存在的视频和音频，避免重复下载和提取，极大提升重跑效率。
-- **自动化工作流**: 封装 `yt-dlp` 下载 -> `ffmpeg` 提取 -> GPU 转录 -> 整理归档全流程。
+  - **自动归档**: 总结笔记自动保存至 Obsidian 的 `BiliNotes/` 目录。
+  - **时间戳跳转**: 笔记保留源视频的时间戳链接，点击即达。
+  - **Frontmatter**: 自动生成符合 Obsidian 规范的元数据（Tags, Source, Created）。
 
 ## 🛠️ 安装
 
-### 1. 基础安装
-
+### 1. 基础环境
 ```bash
 # 创建并激活虚拟环境
 python3 -m venv venv
 source venv/bin/activate
 
-# 安装基础依赖
+# 安装依赖
 pip install -r requirements.txt
 ```
 
-### 2. 进阶引擎支持 (FunASR)
-
-如需使用 FunASR 引擎，需安装 PyTorch 和 ModelScope：
-
-```bash
-# 安装 PyTorch (根据你的 CUDA 版本选择，这里以 CUDA 12.1 为例)
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-
-# 安装 FunASR
-pip install funasr modelscope
-```
-
-### 3. NVIDIA 库配置 (解决 libcublas 错误)
-
-如果 Whisper 报错 `Library libcublas.so.12 is not found`：
-
+### 2. (可选) NVIDIA 库配置
+如果你使用 NVIDIA GPU 加速 Whisper：
 ```bash
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
 ```
 
 ## 🚀 使用方法
 
-### 快速开始
+### 方式一：通过 OpenCode Agent (推荐)
+直接在对话中发送指令：
+> “处理 https://www.bilibili.com/video/BV1xxxxxx”
+
+Agent 会自动：
+1. 调起脚本下载音频并生成原始文稿。
+2. 读取文稿并进行深度总结。
+3. 将总结存入你的 Obsidian。
+
+### 方式二：手动 CLI 运行
+如果你只想生成原始 ASR 文稿：
 
 ```bash
 export PYTHONPATH=$PYTHONPATH:.
+# 默认 Audio-Only + Whisper large-v3
 ./venv/bin/python src/main.py "https://www.bilibili.com/video/BV1xxxxxx"
 ```
 
-### 配置文件 (推荐)
+## ⚙️ 配置 (config.json)
 
-在项目根目录创建 `config.json`，设置你的 Obsidian 仓库路径：
+在项目根目录创建 `config.json` 以启用 Obsidian 自动归档：
 
 ```json
 {
@@ -68,27 +65,15 @@ export PYTHONPATH=$PYTHONPATH:.
 }
 ```
 
-设置后，程序会自动将生成的 Markdown 笔记保存到 Vault 中的 `BiliInbox` 文件夹。
+## 📂 输出结构
 
-### 命令行参数
+- **原始文稿**: `output/transcripts/[UP主]-[标题]_[引擎].md` (包含详细时间戳)
+- **智能笔记**: `{ObsidianVault}/BiliNotes/[UP主]-[标题].md` (由 Agent 生成的精华)
 
-```bash
-# 指定引擎 (funasr) 并强制保存到特定 Obsidian 路径
-./venv/bin/python src/main.py "URL" --engine funasr --obsidian-vault "/path/to/vault"
+## 🧠 Skill 架构
 
-# 仅下载并保留音频文件 (方便调试)
-./venv/bin/python src/main.py "URL" --keep-audio
-```
-
-## 常见问题
-
-1.  **`ModuleNotFoundError: No module named 'src'`**:
-    *   运行前请执行 `export PYTHONPATH=$PYTHONPATH:.`。
-2.  **重复下载？**:
-    *   程序会自动检测 `output/` 目录下的视频文件，如果存在则直接复用。
-3.  **FunASR 运行慢？**:
-    *   目前默认强制使用 CPU 运行 FunASR 以避免 CUDA 兼容性问题。由于其非自回归特性，CPU 速度依然尚可。
-
-## 输出结构
-- **Markdown**: 保存到配置的 Obsidian 目录（或 `output/`）。
-- **Video**: 始终归档到项目的 `output/` 目录。
+本项目遵循 OpenCode Skill 规范：
+- `src/`: 核心 Python 逻辑 (下载/提取/转录)。
+- `.opencode/skills/bili-transcribe/`: 
+    - `SKILL.md`: Agent 的操作手册。
+    - `PROMPT.md`: 总结专家的系统指令。
