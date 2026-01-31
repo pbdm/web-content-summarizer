@@ -22,6 +22,7 @@ if CONFIG_FILE.exists():
 BIN_DIR = PROJECT_ROOT / "bin"
 TEMP_DIR = PROJECT_ROOT / "temp"
 OUTPUT_DIR = PROJECT_ROOT / "output"
+LOCAL_TRANSCRIPT_DIR = OUTPUT_DIR / "transcripts"  # 本地 ASR 存档
 
 # FFmpeg 路径
 FFMPEG_PATH = BIN_DIR / "ffmpeg"
@@ -30,6 +31,7 @@ FFPROBE_PATH = BIN_DIR / "ffprobe"
 # 确保目录存在
 TEMP_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
+LOCAL_TRANSCRIPT_DIR.mkdir(exist_ok=True)
 
 # 检查 FFmpeg 是否存在
 if not FFMPEG_PATH.exists():

@@ -18,7 +18,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages
 
 - **bili-transcribe**: 自动化下载、音频提取及高精度 ASR 转录。
   - 使用方式：直接在聊天中发送“处理 [BiliURL]”。
-  - 特性：自动检测 `venv` 环境，支持 `large-v3` 模型，自动归档至 Obsidian。
+  - 特性：自动检测 `venv` 环境，支持 `large-v3` 模型，集成 LLM 智能总结并归档至 Obsidian (`BiliNotes`)。
 
 ## ⚙️ 配置文件 (config.json)
 
@@ -32,12 +32,16 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages
 
 ## 📁 目录结构
 - `src/`: 源代码
-- `output/`: 视频归档
+- `output/`: 视频归档及原始文稿 (`transcripts/`)
 - `.opencode/skills/`: 固化的 Agent 专家技能
 - `config.json`: 用户配置 (被 git 忽略)
 - `ASR_BENCHMARK.md`: Whisper 与 FunASR 的详细对比评测
 
 ## 🛠️ 更新日志
+- **2026-01-31**:
+    - **bili-transcribe 升级**: 集成 LLM 总结功能 (Agent-driven)。
+    - **Workflow 调整**: 原始 ASR 文稿仅保存在本地 `output/transcripts/`，Obsidian (`BiliNotes/`) 存储由 Agent 生成的智能总结笔记。
+    - **零配置 LLM**: 移除对外部 API Key 的依赖，直接复用 Agent 自身的推理能力。
 - **2026-01-28**:
     - 完成从 **Gemini** 到 **OpenCode** 的全面迁移。
     - 迁移所有技能配置至 `.opencode/skills/`。

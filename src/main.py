@@ -12,7 +12,7 @@ from src.downloader import VideoDownloader
 from src.audio import AudioExtractor
 from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
-from src.config import OUTPUT_DIR, TEMP_DIR, OBSIDIAN_VAULT_PATH
+from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR
 
 class ContentItem:
     def __init__(self, start, text, type="speech"):
@@ -26,7 +26,6 @@ def main():
     parser.add_argument("--model", default="large-v3", help="Whisper model size (default: large-v3)")
     parser.add_argument("--keep-audio", action="store_true", help="Keep the intermediate WAV audio file")
     parser.add_argument("--engine", choices=["whisper", "funasr"], default="whisper", help="ASR engine to use (default: whisper)")
-    parser.add_argument("--obsidian-vault", default=OBSIDIAN_VAULT_PATH, help=f"Path to Obsidian vault (default: {OBSIDIAN_VAULT_PATH})")
     parser.add_argument("--fast", action="store_true", help="Speed mode: uses lower beam size and quantization")
     
     args = parser.parse_args()
@@ -46,6 +45,7 @@ def main():
         audio_path = extractor.extract(video_path)
 
         # 3. 加载模型并转录 (动态加载引擎)
+        beam_size = 5 # Default beam size
         if args.engine == "funasr":
             print("Engine: FunASR (Lazy Loading...)")
             try:
@@ -70,7 +70,10 @@ def main():
                 num_workers=num_workers
             )
             
-        asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size if args.engine != "funasr" else 5)
+        if args.engine == "funasr":
+            asr_segments = transcriber.transcribe(audio_path)
+        else:
+            asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
         
         # 封装结果并显示进度
         content_items = []
@@ -81,22 +84,15 @@ def main():
             if count % 20 == 0:
                 print(f"[Progress] Transcribed up to {seg.start:.1f}s...")
 
-        # 4. 生成 Markdown
+        # 4. 生成原始 Markdown (保存到本地临时目录)
         md_filename = f"{uploader}-{video_title}_{args.engine}.md"
+        local_md_path = LOCAL_TRANSCRIPT_DIR / md_filename
         
-        if args.obsidian_vault:
-            vault_path = Path(args.obsidian_vault)
-            if vault_path.exists():
-                inbox_dir = vault_path / "BiliInbox"
-                inbox_dir.mkdir(exist_ok=True)
-                md_path = inbox_dir / md_filename
-                print(f"📂 Obsidian Mode: Saving note to {md_path}")
-            else:
-                md_path = OUTPUT_DIR / md_filename
-        else:
-            md_path = OUTPUT_DIR / md_filename
+        print(f"📂 Saving raw transcript to local path: {local_md_path}")
+        formatter.save(content_items, local_md_path, title=video_title, source_url=args.url)
         
-        formatter.save(content_items, md_path, title=video_title, source_url=args.url)
+        # 关键：打印特定的成功标识，供 Agent 识别
+        print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
 
         # 5. 整理文件 (Finalize)
         final_video_path = OUTPUT_DIR / video_path.name
