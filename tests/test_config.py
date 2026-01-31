@@ -1,18 +1,25 @@
-import pytest
-import json
-from src import config
+def test_get_default_device_cuda(mocker):
+    # Mock torch.cuda.is_available to return True
+    mock_torch = mocker.Mock()
+    mock_torch.cuda.is_available.return_value = True
+    mocker.patch.dict("sys.modules", {"torch": mock_torch})
+    
+    # We need to re-import or use the function if it's exported
+    from src.config import get_default_device
+    assert get_default_device() == "cuda"
 
-def test_config_loading(tmp_path, mocker):
-    # 模拟配置文件
-    mock_config = tmp_path / "config.json"
-    mock_config.write_text(json.dumps({"obsidian_vault_path": "/fake/vault"}), encoding="utf-8")
+def test_get_default_device_cpu(mocker):
+    # Mock torch.cuda.is_available to return False
+    mock_torch = mocker.Mock()
+    mock_torch.cuda.is_available.return_value = False
+    mocker.patch.dict("sys.modules", {"torch": mock_torch})
     
-    # 临时修改 config 里的路径
-    mocker.patch("src.config.CONFIG_FILE", mock_config)
+    from src.config import get_default_device
+    assert get_default_device() == "cpu"
+
+def test_get_default_device_no_torch(mocker):
+    # Mock torch to be missing
+    mocker.patch.dict("sys.modules", {"torch": None})
     
-    # 因为 config 在导入时已经运行，我们需要一种方式验证其逻辑
-    # 这里我们直接测试加载逻辑的函数（如果抽离出来的话）或者模拟其行为
-    # 简便起见，这里演示如何验证
-    with open(mock_config, 'r') as f:
-        data = json.load(f)
-        assert data["obsidian_vault_path"] == "/fake/vault"
+    from src.config import get_default_device
+    assert get_default_device() == "cpu"
