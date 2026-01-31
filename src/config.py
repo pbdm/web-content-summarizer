@@ -38,7 +38,18 @@ if not FFMPEG_PATH.exists():
     raise FileNotFoundError(f"FFmpeg binary not found at {FFMPEG_PATH}")
 
 # 模型配置
+def get_default_device():
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        # 如果没装 torch，尝试通过 faster-whisper 的方式检测 (这里简单 fallback)
+        return "cpu"
+
+DEFAULT_DEVICE = get_default_device()
+# 根据设备选择最优计算类型
+DEFAULT_COMPUTE_TYPE = "float16" if DEFAULT_DEVICE == "cuda" else "int8"
 DEFAULT_MODEL_SIZE = "large-v3"
-DEFAULT_DEVICE = "cuda"  # 用户有 NVIDIA GPU
-DEFAULT_COMPUTE_TYPE = "float16" # 或者 'int8_float16' 
-DEFAULT_NUM_WORKERS = 1
+DEFAULT_NUM_WORKERS = 4 if DEFAULT_DEVICE == "cpu" else 1
+
+print(f"DEBUG: Hardware detected: {DEFAULT_DEVICE}, using compute_type: {DEFAULT_COMPUTE_TYPE}")

@@ -2,14 +2,15 @@
 
 ## 🚀 启动命令 (One-Liner)
 
-复制以下命令在项目根目录下运行。它会自动处理环境变量，并优先读取 `config.json` 中的配置。
+复制以下命令在项目根目录下运行。它会自动配置虚拟环境、安装依赖并适配硬件。
 
 ```bash
-export PYTHONPATH=$PYTHONPATH:.
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages/nvidia/cublas/lib:$(pwd)/venv/lib/python3.12/site-packages/nvidia/cudnn/lib
+# 一键初始化 (仅需运行一次)
+chmod +x setup.sh && ./setup.sh
 
-# 运行 Whisper (默认, 推荐)
-./venv/bin/python src/main.py "YOUR_BILI_URL_HERE"
+# 运行转录 (自动适配 GPU/CPU)
+export PYTHONPATH=$PYTHONPATH:.
+./venv/bin/python3 src/main.py "YOUR_BILI_URL_HERE"
 ```
 
 ## 🧠 Agent Skills
@@ -18,7 +19,10 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages
 
 - **bili-transcribe**: 自动化下载、音频提取及高精度 ASR 转录。
   - 使用方式：直接在聊天中发送“处理 [BiliURL]”。
-  - 特性：自动检测 `venv` 环境，支持 `large-v3` 模型，集成 LLM 智能总结并归档至 Obsidian (`BiliNotes`)。
+  - 特性：
+    - **一键部署**: 支持 `setup.sh` 快速搭建，自动修复精简系统的 pip/venv 问题。
+    - **硬件适配**: 自动检测 CUDA，智能切换 GPU (float16) 或 CPU (int8) 模式。
+    - **智能总结**: 生成带时间戳的 Markdown 文稿并归档至 Obsidian (`BiliNotes`)。
 
 ## ⚙️ 配置文件 (config.json)
 
@@ -40,8 +44,8 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/venv/lib/python3.12/site-packages
 ## 🛠️ 更新日志
 - **2026-01-31**:
     - **bili-transcribe 升级**: 集成 LLM 总结功能 (Agent-driven)。
+    - **架构健壮性优化**: 新增 `setup.sh` 支持一键环境初始化；实现 CUDA/CPU 自动检测与适配；通过 `imageio-ffmpeg` 解决 FFmpeg 二进制依赖问题。
     - **Workflow 调整**: 原始 ASR 文稿仅保存在本地 `output/transcripts/`，Obsidian (`BiliNotes/`) 存储由 Agent 生成的智能总结笔记。
-    - **零配置 LLM**: 移除对外部 API Key 的依赖，直接复用 Agent 自身的推理能力。
 - **2026-01-28**:
     - 完成从 **Gemini** 到 **OpenCode** 的全面迁移。
     - 迁移所有技能配置至 `.opencode/skills/`。

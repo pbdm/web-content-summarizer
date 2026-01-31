@@ -19,20 +19,21 @@
 
 ## 🛠️ 安装
 
-### 1. 基础环境
+### 1. 一键环境搭建 (推荐)
+适用于 Linux/WSL。脚本会自动创建虚拟环境、安装依赖并配置 FFmpeg。
 ```bash
-# 创建并激活虚拟环境
-python3 -m venv venv
-source venv/bin/activate
-
-# 安装依赖
-pip install -r requirements.txt
+chmod +x setup.sh
+./setup.sh
 ```
 
-### 2. (可选) NVIDIA 库配置
-如果你使用 NVIDIA GPU 加速 Whisper：
+### 2. 硬件适配
+项目会自动检测 CUDA 支持情况：
+- **GPU (NVIDIA)**: 自动启用 `cuda` 模式 + `float16` 加速。
+- **CPU**: 自动切换为 `cpu` 模式 + `int8` 量化（节省内存并提速）。
+
+如果需要手动强制指定：
 ```bash
-pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+./venv/bin/python3 src/main.py [URL] --device cpu --compute-type int8
 ```
 
 ## 🚀 使用方法

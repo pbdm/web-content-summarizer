@@ -12,7 +12,7 @@ from src.downloader import VideoDownloader
 from src.audio import AudioExtractor
 from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
-from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR
+from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR, DEFAULT_COMPUTE_TYPE, DEFAULT_DEVICE, DEFAULT_NUM_WORKERS
 
 class ContentItem:
     def __init__(self, start, text, type="speech"):
@@ -27,6 +27,8 @@ def main():
     parser.add_argument("--keep-audio", action="store_true", help="Keep the intermediate WAV audio file")
     parser.add_argument("--engine", choices=["whisper", "funasr"], default="whisper", help="ASR engine to use (default: whisper)")
     parser.add_argument("--fast", action="store_true", help="Speed mode: uses lower beam size and quantization")
+    parser.add_argument("--device", default=DEFAULT_DEVICE, help=f"Device to use (default: {DEFAULT_DEVICE})")
+    parser.add_argument("--compute-type", default=DEFAULT_COMPUTE_TYPE, help=f"Compute type (default: {DEFAULT_COMPUTE_TYPE})")
     
     args = parser.parse_args()
 
@@ -58,13 +60,14 @@ def main():
                 sys.exit(1)
         else:
             # Whisper 模式
-            compute_type = "float16" 
-            num_workers = 4 if args.fast else 1
+            compute_type = args.compute_type
+            num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
             beam_size = 5 
             
-            print(f"Engine: Whisper ({args.model}) | High-Perf Mode: {args.fast} | Beam Size: {beam_size}")
+            print(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | High-Perf Mode: {args.fast}")
             transcriber = Transcriber(
                 model_size=args.model, 
+                device=args.device,
                 compute_type=compute_type,
                 num_workers=num_workers
             )
