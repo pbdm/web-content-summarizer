@@ -21,8 +21,10 @@ export PYTHONPATH=$PYTHONPATH:.
   - 使用方式：直接在聊天中发送“处理 [BiliURL]”。
   - 特性：
     - **一键部署**: 支持 `setup.sh` 快速搭建，自动修复精简系统的 pip/venv 问题。
-    - **硬件适配**: 自动检测 CUDA，智能切换 GPU (float16) 或 CPU (int8) 模式。
+    - **环境自适应**: 自动检测 CUDA；CPU 模式下主动切换至 `base` 模型以确保响应速度。
+    - **智能降级**: 若加载失败，自动尝试更小的模型（large -> medium -> small -> base -> tiny）。
     - **智能总结**: 生成带时间戳的 Markdown 文稿并归档至 Obsidian (`BiliNotes`)。
+
 
 ## ⚙️ 配置文件 (config.json)
 

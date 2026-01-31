@@ -27,13 +27,13 @@ chmod +x setup.sh
 ```
 
 ### 2. 硬件适配
-项目会自动检测 CUDA 支持情况：
-- **GPU (NVIDIA)**: 自动启用 `cuda` 模式 + `float16` 加速。
-- **CPU**: 自动切换为 `cpu` 模式 + `int8` 量化（节省内存并提速）。
+项目会自动检测 CUDA 支持情况并**主动调整默认配置**：
+- **GPU (NVIDIA)**: 自动启用 `cuda` 模式 + `float16` 加速。默认模型：**`large-v3`**。
+- **CPU**: 自动切换为 `cpu` 模式 + `int8` 量化。默认模型：**`base`**（平衡速度与精度，防止超时）。
 
 如果需要手动强制指定：
 ```bash
-./venv/bin/python3 src/main.py [URL] --device cpu --compute-type int8
+./venv/bin/python3 src/main.py [URL] --model small --device cpu
 ```
 
 ## 🚀 使用方法

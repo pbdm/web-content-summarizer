@@ -12,7 +12,7 @@ from src.downloader import VideoDownloader
 from src.audio import AudioExtractor
 from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
-from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR, DEFAULT_COMPUTE_TYPE, DEFAULT_DEVICE, DEFAULT_NUM_WORKERS
+from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR, DEFAULT_COMPUTE_TYPE, DEFAULT_DEVICE, DEFAULT_NUM_WORKERS, DEFAULT_MODEL_SIZE
 
 class ContentItem:
     def __init__(self, start, text, type="speech"):
@@ -23,7 +23,7 @@ class ContentItem:
 def main():
     parser = argparse.ArgumentParser(description="BiliTranscribe: Download and transcribe Bilibili videos to Markdown.")
     parser.add_argument("url", help="Bilibili video URL")
-    parser.add_argument("--model", default="large-v3", help="Whisper model size (default: large-v3)")
+    parser.add_argument("--model", default=DEFAULT_MODEL_SIZE, help=f"Whisper model size (default: {DEFAULT_MODEL_SIZE})")
     parser.add_argument("--keep-audio", action="store_true", help="Keep the intermediate WAV audio file")
     parser.add_argument("--engine", choices=["whisper", "funasr"], default="whisper", help="ASR engine to use (default: whisper)")
     parser.add_argument("--fast", action="store_true", help="Speed mode: uses lower beam size and quantization")
