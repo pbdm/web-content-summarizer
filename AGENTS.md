@@ -15,16 +15,16 @@ export PYTHONPATH=$PYTHONPATH:.
 
 ## 🧠 Agent Skills
 
-项目现已集成 **OpenCode Agent Skill**，可通过以下指令直接触发：
+⚠️ **重要：** 任何时候执行“视频转录”或“生成笔记”任务时，**必须**首先调用并遵循 `bili-transcribe` Skill。
 
 - **bili-transcribe**: 自动化下载、音频提取及高精度 ASR 转录。
-  - 使用方式：直接在聊天中发送“处理 [BiliURL]”。
-  - 特性：
-    - **一键部署**: 支持 `setup.sh` 快速搭建，自动修复精简系统的 pip/venv 问题。
-    - **环境自适应**: 自动检测 CUDA；CPU 模式下主动切换至 `base` 模型以确保响应速度。
-    - **智能降级**: 若加载失败，自动尝试更小的模型（large -> medium -> small -> base -> tiny）。
-    - **智能总结**: 生成带时间戳的 Markdown 文稿并归档至 Obsidian (`BiliNotes`)。
-
+  - **触发规则**: 当用户提供 BiliBili 链接要求“总结”、“转录”或“笔记”时，**强制加载**此 Skill。
+  - **使用方式**:
+    1. 调用 `Skill(name="bili-transcribe")` 获取执行清单。
+    2. 执行脚本 `./venv/bin/python3 src/main.py ...`
+    3. **关键步骤**: 必须等待脚本输出 `🚀 [ACTION REQUIRED]` 提示。
+    4. **关键步骤**: 必须读取脚本生成的原始文稿。
+    5. **关键步骤**: 必须根据 `.opencode/skills/bili-transcribe/PROMPT.md` 生成总结并归档至 Obsidian。
 
 ## ⚙️ 配置文件 (config.json)
 
@@ -44,6 +44,9 @@ export PYTHONPATH=$PYTHONPATH:.
 - `ASR_BENCHMARK.md`: Whisper 与 FunASR 的详细对比评测
 
 ## 🛠️ 更新日志
+- **2026-02-08**:
+    - **Skill 强制性增强**: 在 `AGENTS.md` 中明确了 Skill 的强制调用规则。
+    - **防御性编程**: `src/main.py` 现在会输出 `[ACTION REQUIRED]` 提示，防止 Agent 遗漏 Obsidian 归档步骤。
 - **2026-01-31**:
     - **bili-transcribe 升级**: 集成 LLM 总结功能 (Agent-driven)。
     - **架构健壮性优化**: 新增 `setup.sh` 支持一键环境初始化；实现 CUDA/CPU 自动检测与适配；通过 `imageio-ffmpeg` 解决 FFmpeg 二进制依赖问题。
