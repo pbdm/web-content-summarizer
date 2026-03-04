@@ -1,8 +1,11 @@
 import subprocess
 from pathlib import Path
 from .config import FFMPEG_PATH
+from .logger import logger
+from .utils import time_it
 
 class AudioExtractor:
+    @time_it
     def extract(self, video_path: Path) -> Path:
         """
         从视频中提取音频并转换为 Whisper 友好的格式 (16k wav mono).
@@ -13,10 +16,10 @@ class AudioExtractor:
         
         # 检查是否已存在
         if output_path.exists() and output_path.stat().st_size > 0:
-            print(f"Using existing audio file: {output_path.name}")
+            logger.info(f"♻️  Using existing audio file: {output_path.name}")
             return output_path
         
-        print(f"Extracting audio to: {output_path.name}...")
+        logger.info(f"🎵 Extracting audio to: {output_path.name}...")
 
         # 构建 ffmpeg 命令
         # -i: 输入

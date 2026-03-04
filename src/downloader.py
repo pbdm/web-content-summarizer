@@ -1,6 +1,8 @@
 import yt_dlp
 from pathlib import Path
 from .config import TEMP_DIR, OUTPUT_DIR, FFMPEG_PATH
+from .logger import logger
+from .utils import time_it
 
 class VideoDownloader:
     def __init__(self, audio_only=True):
@@ -19,11 +21,12 @@ class VideoDownloader:
         if not audio_only:
             self.ydl_opts['merge_output_format'] = 'mp4'
 
+    @time_it
     def download(self, url: str):
         """
         下载并返回 (本地文件路径, UP主姓名)。
         """
-        print(f"Analyzing URL: {url}...")
+        logger.info(f"🚀 Analyzing URL: {url}...")
         
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
             # 1. 预先获取信息
@@ -36,7 +39,7 @@ class VideoDownloader:
             temp_path = Path(temp_filename)
             
             # 3. 下载
-            print(f"Downloading {'audio' if self.audio_only else 'video'}...")
+            logger.info(f"⬇️  Downloading {'audio' if self.audio_only else 'video'}...")
             ydl.download([url])
             
             # 获取实际下载的文件路径
@@ -56,5 +59,5 @@ class VideoDownloader:
                 if candidates:
                     filepath = candidates[0]
             
-            print(f"Download complete: {filepath.name}")
+            logger.info(f"✅ Download complete: {filepath.name}")
             return filepath, uploader

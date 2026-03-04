@@ -2,6 +2,7 @@ import argparse
 import shutil
 import sys
 import os
+import time
 from pathlib import Path
 
 # 将项目根目录添加到 sys.path
@@ -13,12 +14,101 @@ from src.audio import AudioExtractor
 from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
 from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR, DEFAULT_COMPUTE_TYPE, DEFAULT_DEVICE, DEFAULT_NUM_WORKERS, DEFAULT_MODEL_SIZE
+from src.logger import logger
+from src.utils import time_it
 
 class ContentItem:
     def __init__(self, start, text, type="speech"):
         self.start = start
         self.text = text
         self.type = type # "speech" or "ocr"
+
+@time_it
+def process_pipeline(args):
+    """
+    完整的处理流水线。
+    """
+    # 初始化模块 (默认为纯音频模式)
+    downloader = VideoDownloader(audio_only=True)
+    extractor = AudioExtractor()
+    transcriber = None 
+    formatter = MarkdownFormatter()
+
+    # 1. 下载 (Audio)
+    media_path, uploader = downloader.download(args.url)
+    video_title = media_path.stem
+
+    # 2. 转换/标准化音频 (Convert to 16k wav)
+    audio_path = extractor.extract(media_path)
+
+    # 3. 加载模型并转录
+    beam_size = 5 # Default beam size
+    if args.engine == "funasr":
+        logger.info("Engine: FunASR (Lazy Loading...)")
+        try:
+            from src.transcriber_funasr import FunASRTranscriber
+            transcriber = FunASRTranscriber()
+        except Exception as e:
+            logger.error(f"❌ Error loading FunASR: {e}")
+            logger.info("Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead.")
+            sys.exit(1)
+    else:
+        # Whisper 模式
+        compute_type = args.compute_type
+        num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
+        
+        logger.info(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | High-Perf Mode: {args.fast}")
+        transcriber = Transcriber(
+            model_size=args.model, 
+            device=args.device,
+            compute_type=compute_type,
+            num_workers=num_workers
+        )
+        
+    # 统一接口调用
+    asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
+    
+    # 封装结果
+    content_items = []
+    count = 0
+    for seg in asr_segments:
+        content_items.append(ContentItem(seg.start, seg.text, "speech"))
+        count += 1
+        if count % 20 == 0:
+            logger.info(f"[Progress] Transcribed up to {seg.start:.1f}s...")
+
+    # 4. 生成原始 Markdown
+    md_filename = f"{uploader}-{video_title}_{args.engine}.md"
+    local_md_path = LOCAL_TRANSCRIPT_DIR / md_filename
+    
+    logger.info(f"📂 Saving raw transcript to local path: {local_md_path}")
+    formatter.save(content_items, local_md_path, title=video_title, source_url=args.url)
+    
+    # 关键：打印特定的成功标识，供 Agent 识别
+    print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
+
+    # 6. 提示 Agent 进行 Obsidian 智能总结 (Anti-Omission Step)
+    from src.config import OBSIDIAN_VAULT_PATH
+    if OBSIDIAN_VAULT_PATH:
+        obsidian_note_dir = Path(OBSIDIAN_VAULT_PATH) / "BiliNotes"
+        obsidian_note_dir.mkdir(parents=True, exist_ok=True)
+        target_md = obsidian_note_dir / f"{video_title}.md"
+        print("\n" + "="*60)
+        print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
+        print(f"Please read the transcript above and generate a summary note.")
+        print(f"Target Path: {target_md}")
+        print("="*60 + "\n")
+    else:
+        logger.info("Obsidian vault path not configured. Skipping summary prompt.")
+
+    # 5. 清理文件
+    if media_path.exists() and media_path.resolve() != audio_path.resolve():
+        os.remove(media_path)
+
+    if not args.keep_audio:
+        if audio_path.exists():
+            os.remove(audio_path)
+            logger.info("🗑️  Temporary audio file removed.")
 
 def main():
     parser = argparse.ArgumentParser(description="BiliTranscribe: Download and transcribe Bilibili videos to Markdown.")
@@ -32,100 +122,13 @@ def main():
     
     args = parser.parse_args()
 
-    # 初始化模块 (默认为纯音频模式)
-    downloader = VideoDownloader(audio_only=True)
-    extractor = AudioExtractor()
-    transcriber = None 
-    formatter = MarkdownFormatter()
-
     try:
-        # 1. 下载 (Audio)
-        media_path, uploader = downloader.download(args.url)
-        video_title = media_path.stem
-
-        # 2. 转换/标准化音频 (Convert to 16k wav)
-        # 即使下载的是音频，我们也通过这一步将其统一为 Whisper 最佳的 16k mono wav
-        audio_path = extractor.extract(media_path)
-
-        # 3. 加载模型并转录
-        beam_size = 5 # Default beam size
-        if args.engine == "funasr":
-            print("Engine: FunASR (Lazy Loading...)")
-            try:
-                from src.transcriber_funasr import FunASRTranscriber
-                transcriber = FunASRTranscriber()
-            except Exception as e:
-                print(f"❌ Error loading FunASR: {e}")
-                print("Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead.")
-                sys.exit(1)
-        else:
-            # Whisper 模式
-            compute_type = args.compute_type
-            num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
-            beam_size = 5 
-            
-            print(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | High-Perf Mode: {args.fast}")
-            transcriber = Transcriber(
-                model_size=args.model, 
-                device=args.device,
-                compute_type=compute_type,
-                num_workers=num_workers
-            )
-            
-        # 统一接口调用
-        asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
-        
-        # 封装结果
-        content_items = []
-        count = 0
-        for seg in asr_segments:
-            content_items.append(ContentItem(seg.start, seg.text, "speech"))
-            count += 1
-            if count % 20 == 0:
-                print(f"[Progress] Transcribed up to {seg.start:.1f}s...")
-
-        # 4. 生成原始 Markdown
-        md_filename = f"{uploader}-{video_title}_{args.engine}.md"
-        local_md_path = LOCAL_TRANSCRIPT_DIR / md_filename
-        
-        print(f"📂 Saving raw transcript to local path: {local_md_path}")
-        formatter.save(content_items, local_md_path, title=video_title, source_url=args.url)
-        
-        # 关键：打印特定的成功标识，供 Agent 识别
-        print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
-
-        # 6. 提示 Agent 进行 Obsidian 智能总结 (Anti-Omission Step)
-        from src.config import OBSIDIAN_VAULT_PATH
-        if OBSIDIAN_VAULT_PATH:
-            obsidian_note_dir = Path(OBSIDIAN_VAULT_PATH) / "BiliNotes"
-            obsidian_note_dir.mkdir(parents=True, exist_ok=True)
-            target_md = obsidian_note_dir / f"{video_title}.md"
-            print("\n" + "="*60)
-            print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
-            print(f"Please read the transcript above and generate a summary note.")
-            print(f"Target Path: {target_md}")
-            print("="*60 + "\n")
-        else:
-            print("\n[Info] Obsidian vault path not configured. Skipping summary prompt.")
-
-        # 5. 清理文件
-        # 清理下载的源文件 (通常是 .m4a 或 .webm)
-        if media_path.exists() and media_path.resolve() != audio_path.resolve():
-            os.remove(media_path)
-            # print("Source media file removed.")
-
-        # 清理转换后的 wav 文件 (除非指定保留)
-        if not args.keep_audio:
-            if audio_path.exists():
-                os.remove(audio_path)
-                print("Temporary audio file removed.")
-
-        print("\n✨ Process completed successfully!")
-
+        process_pipeline(args)
+        logger.info("✨ All processes completed successfully!")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        logger.error(f"💥 Critical Error: {e}")
         import traceback
-        traceback.print_exc()
+        logger.debug(traceback.format_exc())
         sys.exit(1)
 
 if __name__ == "__main__":
