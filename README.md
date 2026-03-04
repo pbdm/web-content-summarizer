@@ -6,7 +6,7 @@
 
 - **Agent 驱动的智能总结**:
   - 不仅仅是转录，更通过 LLM (Agent) 将冗长的文稿转化为结构清晰、逻辑严密的知识笔记。
-  - 内置专家级 Prompt (`.opencode/skills/bili-transcribe/PROMPT.md`)，自动提取核心观点、实操建议和风险提示。
+  - 内置专家级 **Global** `bili-transcribe` Skill，自动提取核心观点、实操建议和风险提示。
 - **极速 Audio-Only 模式**:
   - 默认仅下载最佳音质的音频流，无需下载巨大的视频文件，带宽占用极低，处理速度飞快。
 - **双引擎转录**: 
@@ -73,8 +73,6 @@ export PYTHONPATH=$PYTHONPATH:.
 
 ## 🧠 Skill 架构
 
-本项目遵循 OpenCode Skill 规范：
-- `src/`: 核心 Python 逻辑 (下载/提取/转录)。
-- `.opencode/skills/bili-transcribe/`: 
-    - `SKILL.md`: Agent 的操作手册。
-    - `PROMPT.md`: 总结专家的系统指令。
+本项目已将核心业务逻辑与 Agent 专家能力分离：
+- `src/`: 核心 Python 处理引擎 (下载/提取/转录/日志)。
+- **Global Skill**: `bili-transcribe` 已作为全局专家技能固化，不再占用项目局部代码空间。

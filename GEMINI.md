@@ -15,16 +15,16 @@ export PYTHONPATH=$PYTHONPATH:.
 
 ## 🧠 Agent Skills
 
-⚠️ **重要：** 任何时候执行“视频转录”或“生成笔记”任务时，**必须**首先调用并遵循 `bili-transcribe` Skill。
+⚠️ **重要：** 任何时候执行“视频转录”或“生成笔记”任务时，**必须**首先调用并遵循 **Global** `bili-transcribe` Skill。
 
 - **bili-transcribe**: 自动化下载、音频提取及高精度 ASR 转录。
   - **触发规则**: 当用户提供 BiliBili 链接要求“总结”、“转录”或“笔记”时，**强制加载**此 Skill。
   - **使用方式**:
-    1. 调用 `Skill(name="bili-transcribe")` 获取执行清单。
+    1. 调用 `Skill(name="bili-transcribe")` 激活全局专家技能。
     2. 执行脚本 `./venv/bin/python3 src/main.py ...`
     3. **关键步骤**: 必须等待脚本输出 `🚀 [ACTION REQUIRED]` 提示。
     4. **关键步骤**: 必须读取脚本生成的原始文稿。
-    5. **关键步骤**: 必须根据 `.opencode/skills/bili-transcribe/PROMPT.md` 生成总结并归档至 Obsidian。
+    5. **关键步骤**: 根据 `bili-transcribe` Skill 的 `PROMPT.md` 生成总结并归档至 Obsidian。
 
 ## ⚙️ 配置文件 (config.json)
 
@@ -38,8 +38,8 @@ export PYTHONPATH=$PYTHONPATH:.
 
 ## 📁 目录结构
 - `src/`: 源代码
-- `output/`: 视频归档及原始文稿 (`transcripts/`)
-- `.opencode/skills/`: 固化的 Agent 专家技能
+- `output/`: 视频归档及原始文稿 (`transcripts/`)，日志 (`logs/`)
+- `Global Skill`: `bili-transcribe` 已作为全局专家技能固化
 - `config.json`: 用户配置 (被 git 忽略)
 - `ASR_BENCHMARK.md`: Whisper 与 FunASR 的详细对比评测
 
