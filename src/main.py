@@ -66,16 +66,13 @@ def process_pipeline(args):
         )
         
     # 统一接口调用
+    logger.info(f"⚡ Starting ASR inference...")
+    content_items = []
     asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
     
     # 封装结果
-    content_items = []
-    count = 0
     for seg in asr_segments:
         content_items.append(ContentItem(seg.start, seg.text, "speech"))
-        count += 1
-        if count % 20 == 0:
-            logger.info(f"[Progress] Transcribed up to {seg.start:.1f}s...")
 
     # 4. 生成原始 Markdown
     md_filename = f"{uploader}-{video_title}_{args.engine}.md"
@@ -93,11 +90,18 @@ def process_pipeline(args):
         obsidian_note_dir = Path(OBSIDIAN_VAULT_PATH) / "BiliNotes"
         obsidian_note_dir.mkdir(parents=True, exist_ok=True)
         target_md = obsidian_note_dir / f"{video_title}.md"
+        
+        logger.info(f"🤖 Agent summarizing session starting...")
+        summary_start_time = time.perf_counter()
+        
         print("\n" + "="*60)
         print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
         print(f"Please read the transcript above and generate a summary note.")
         print(f"Target Path: {target_md}")
         print("="*60 + "\n")
+        
+        # 注意：Agent 的总结是在脚本运行后的对话中完成的，
+        # 脚本本身在此处会结束。
     else:
         logger.info("Obsidian vault path not configured. Skipping summary prompt.")
 

@@ -49,7 +49,7 @@ class Transcriber:
         """
         logger.info(f"🎙️  Transcribing {audio_path.name} (beam_size={beam_size})...")
         
-        segments, info = self.model.transcribe(
+        segments_gen, info = self.model.transcribe(
             str(audio_path), 
             beam_size=beam_size, 
             language="zh",
@@ -62,4 +62,7 @@ class Transcriber:
 
         logger.info(f"🌐 Detected language '{info.language}' with probability {info.language_probability}")
         logger.info(f"⏳ Total audio duration: {info.duration:.2f}s")
+        
+        # 关键修改：将生成器显式转换为列表，触发模型推理过程，使计时准确
+        segments = list(segments_gen)
         return segments
