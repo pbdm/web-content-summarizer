@@ -47,6 +47,8 @@ class Transcriber:
         转录音频文件。
         beam_size: 搜索宽度，1 为最快，5 为最准。
         """
+        from tqdm import tqdm
+        
         logger.info(f"🎙️  Transcribing {audio_path.name} (beam_size={beam_size})...")
         
         segments_gen, info = self.model.transcribe(
@@ -63,6 +65,20 @@ class Transcriber:
         logger.info(f"🌐 Detected language '{info.language}' with probability {info.language_probability}")
         logger.info(f"⏳ Total audio duration: {info.duration:.2f}s")
         
-        # 关键修改：将生成器显式转换为列表，触发模型推理过程，使计时准确
-        segments = list(segments_gen)
+        # 实时进度条：以音频秒数为单位
+        pbar = tqdm(total=round(info.duration, 2), unit="s", desc="Transcription Progress", leave=True)
+        
+        segments = []
+        last_end = 0
+        for segment in segments_gen:
+            segments.append(segment)
+            # 更新进度条到当前片段的结束时间
+            pbar.update(round(segment.end - last_end, 2))
+            last_end = segment.end
+        
+        # 确保进度条在结束时达到 100%
+        if last_end < info.duration:
+            pbar.update(round(info.duration - last_end, 2))
+            
+        pbar.close()
         return segments

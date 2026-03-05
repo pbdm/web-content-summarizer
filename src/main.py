@@ -35,7 +35,7 @@ def process_pipeline(args):
     formatter = MarkdownFormatter()
 
     # 1. 下载 (Audio)
-    media_path, uploader = downloader.download(args.url)
+    media_path, uploader, upload_date = downloader.download(args.url)
     video_title = media_path.stem
 
     # 2. 转换/标准化音频 (Convert to 16k wav)
@@ -79,7 +79,7 @@ def process_pipeline(args):
     local_md_path = LOCAL_TRANSCRIPT_DIR / md_filename
     
     logger.info(f"📂 Saving raw transcript to local path: {local_md_path}")
-    formatter.save(content_items, local_md_path, title=video_title, source_url=args.url)
+    formatter.save(content_items, local_md_path, title=video_title, source_url=args.url, uploader=uploader, upload_date=upload_date)
     
     # 关键：打印特定的成功标识，供 Agent 识别
     print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")

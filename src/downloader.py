@@ -24,7 +24,7 @@ class VideoDownloader:
     @time_it
     def download(self, url: str):
         """
-        下载并返回 (本地文件路径, UP主姓名)。
+        下载并返回 (本地文件路径, UP主姓名, 发布日期)。
         """
         logger.info(f"🚀 Analyzing URL: {url}...")
         
@@ -32,6 +32,11 @@ class VideoDownloader:
             # 1. 预先获取信息
             info = ydl.extract_info(url, download=False)
             uploader = info.get('uploader', 'Unknown')
+            upload_date = info.get('upload_date', 'Unknown') # 格式通常为 YYYYMMDD
+            
+            # 格式化日期 (从 YYYYMMDD 变为 YYYY-MM-DD)
+            if upload_date != 'Unknown' and len(upload_date) == 8:
+                upload_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:]}"
             
             # 预测文件名
             # prepare_filename 返回的文件名通常带有扩展名
@@ -60,4 +65,4 @@ class VideoDownloader:
                     filepath = candidates[0]
             
             logger.info(f"✅ Download complete: {filepath.name}")
-            return filepath, uploader
+            return filepath, uploader, upload_date

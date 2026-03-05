@@ -13,14 +13,16 @@ class MarkdownFormatter:
         return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
     @time_it
-    def save(self, segments, output_path: Path, title: str, source_url: str):
+    def save(self, segments, output_path: Path, title: str, source_url: str, uploader: str = "Unknown", upload_date: str = "Unknown"):
         logger.info(f"✍️  Saving markdown to {output_path}...")
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         clean_url = source_url.split("?")[0] if "?" in source_url else source_url
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("---\n")
             f.write(f"created: {current_time}\n")
+            f.write(f"published: {upload_date}\n")
             f.write(f"source: {source_url}\n")
+            f.write(f"author: {uploader}\n")
             f.write("tags:\n  - bilibili\n  - transcript\n  - inbox\n")
             f.write("---\n\n")
             
