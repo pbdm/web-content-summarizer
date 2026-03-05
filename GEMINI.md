@@ -44,6 +44,12 @@ export PYTHONPATH=$PYTHONPATH:.
 - `ASR_BENCHMARK.md`: Whisper 与 FunASR 的详细对比评测
 
 ## 🛠️ 更新日志
+- **2026-03-05**:
+    - **结构化日志与性能监控**: 引入 `logging` 模块和 `time_it` 装饰器，实现多级日志持久化及精准的步骤耗时统计（已修复 ASR 生成器延迟计时 BUG）。
+    - **实时进度反馈**: 集成 `tqdm` 进度条，支持转录百分比、预计剩余时间 (ETA) 及处理速度显示。
+    - **硬件加速深度适配**: 完成 **RTX 5070 Ti** (WSL2) 环境构建，优化 Python 环境至 3.12 并配置 CUDA 12.4 + cuDNN，转录效率提升约 20x。
+    - **元数据增强**: 支持提取视频发布日期 (`published`) 并同步至文稿 Frontmatter，强化知识管理维度。
+    - **Skill 全局化**: 迁移 `bili-transcribe` 专家技能至全局路径，实现跨项目、跨场景的认知能力复用。
 - **2026-02-08**:
     - **Skill 强制性增强**: 在 `AGENTS.md` 中明确了 Skill 的强制调用规则。
     - **防御性编程**: `src/main.py` 现在会输出 `[ACTION REQUIRED]` 提示，防止 Agent 遗漏 Obsidian 归档步骤。
