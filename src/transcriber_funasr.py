@@ -1,5 +1,7 @@
 from funasr import AutoModel
 from pathlib import Path
+from .logger import logger
+from .utils import time_it
 
 # 定义一个简单的 Segment 类来模仿 Whisper 的输出格式
 class Segment:
@@ -10,7 +12,7 @@ class Segment:
 
 class FunASRTranscriber:
     def __init__(self, model_dir="iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch", device="cpu"):
-        print(f"Loading FunASR model '{model_dir}' on {device}...")
+        logger.info(f"🧠 Loading FunASR model '{model_dir}' on {device}...")
         
         # 自动加载 Paraformer (ASR), FSMN-VAD (语音活动检测), CT-Transformer (标点)
         self.model = AutoModel(
@@ -25,12 +27,13 @@ class FunASRTranscriber:
             device=device
         )
 
+    @time_it
     def transcribe(self, audio_path: Path, **kwargs):
         """
         转录音频文件，返回 Segment 列表。
         kwargs: 接收额外参数（如 beam_size）以保持接口统一，但在 FunASR 中可能会被忽略。
         """
-        print(f"Transcribing {audio_path.name} with FunASR...")
+        logger.info(f"🎙️  Transcribing {audio_path.name} with FunASR...")
         
         # FunASR inference
         # batch_size_s: 动态batch size
@@ -55,7 +58,7 @@ class FunASRTranscriber:
                     segments.append(Segment(start, end, text))
             else:
                 # Fallback if sentence_info is missing
-                print("Warning: No detailed timestamp info found, using full text.")
+                logger.warning("No detailed timestamp info found, using full text.")
                 segments.append(Segment(0.0, 0.0, item.get('text', '')))
         
         return segments

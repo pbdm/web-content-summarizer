@@ -1,5 +1,7 @@
 from pathlib import Path
 import datetime
+from .logger import logger
+from .utils import time_it
 
 class MarkdownFormatter:
     def _format_timestamp(self, seconds: float) -> str:
@@ -10,8 +12,9 @@ class MarkdownFormatter:
         secs = total_seconds % 60
         return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
+    @time_it
     def save(self, segments, output_path: Path, title: str, source_url: str):
-        print(f"Saving markdown to {output_path}...")
+        logger.info(f"✍️  Saving markdown to {output_path}...")
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         clean_url = source_url.split("?")[0] if "?" in source_url else source_url
         with open(output_path, "w", encoding="utf-8") as f:
@@ -38,4 +41,4 @@ class MarkdownFormatter:
                     f.write("\n")
                 else:
                     f.write(f"- [{start_str}]({timestamp_link}) {text}\n")
-        print("Markdown saved successfully.")
+        logger.info("✅ Markdown saved successfully.")
