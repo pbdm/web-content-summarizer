@@ -16,7 +16,7 @@ class Transcriber:
     def _load_model_with_fallback(self, model_size, device, compute_type, num_workers):
         """带有回退机制的模型加载"""
         try:
-            logger.info(f"🧠 Loading Whisper model '{model_size}' on {device} ({compute_type})...")
+            logger.info(f"🧠 Loading Whisper model '{model_size}' on {device} ({compute_type}) with {num_workers} workers...")
             return WhisperModel(model_size, device=device, compute_type=compute_type, num_workers=num_workers)
         except Exception as e:
             logger.warning(f"⚠️ Failed to load model on {device}: {e}")

@@ -57,7 +57,7 @@ def process_pipeline(args):
         compute_type = args.compute_type
         num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
         
-        logger.info(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | High-Perf Mode: {args.fast}")
+        logger.info(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | Workers: {num_workers} | High-Perf Mode: {args.fast}")
         transcriber = Transcriber(
             model_size=args.model, 
             device=args.device,
