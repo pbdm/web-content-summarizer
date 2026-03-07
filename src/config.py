@@ -50,6 +50,7 @@ DEFAULT_DEVICE = get_default_device()
 # 根据设备选择最优计算类型和默认模型
 DEFAULT_COMPUTE_TYPE = "float16" if DEFAULT_DEVICE == "cuda" else "int8"
 DEFAULT_MODEL_SIZE = "large-v3" if DEFAULT_DEVICE == "cuda" else "base"
-DEFAULT_NUM_WORKERS = 4 if DEFAULT_DEVICE == "cpu" else 1
+# 对于 RTX 5070 Ti (16GB)，2 个 worker 是平衡性能与显存的最佳选择
+DEFAULT_NUM_WORKERS = 2 if DEFAULT_DEVICE == "cuda" else 4
 
 print(f"DEBUG: Hardware detected: {DEFAULT_DEVICE}, using compute_type: {DEFAULT_COMPUTE_TYPE}")
