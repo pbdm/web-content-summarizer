@@ -58,12 +58,12 @@ export PYTHONPATH=$PYTHONPATH:.
 
 ## ⚙️ 配置 (config.json)
 
-在项目根目录创建 `config.json` 以启用 Obsidian 自动归档：
+> [!NOTE] 
+> 本项目已不再从 `config.json` 读取 `obsidian_vault_path`。该路径已硬编码在 **Global** `bili-transcribe` Skill 中：
+> `/mnt/c/Users/Administrator/Documents/others/content/BiliNotes/`
 
 ```json
-{
-    "obsidian_vault_path": "/Users/yourname/Documents/ObsidianVault"
-}
+{}
 ```
 
 ## 📂 输出结构

@@ -85,25 +85,13 @@ def process_pipeline(args):
     print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
 
     # 6. 提示 Agent 进行 Obsidian 智能总结 (Anti-Omission Step)
-    from src.config import OBSIDIAN_VAULT_PATH
-    if OBSIDIAN_VAULT_PATH:
-        obsidian_note_dir = Path(OBSIDIAN_VAULT_PATH) / "BiliNotes"
-        obsidian_note_dir.mkdir(parents=True, exist_ok=True)
-        target_md = obsidian_note_dir / f"{video_title}.md"
-        
-        logger.info(f"🤖 Agent summarizing session starting...")
-        summary_start_time = time.perf_counter()
-        
-        print("\n" + "="*60)
-        print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
-        print(f"Please read the transcript above and generate a summary note.")
-        print(f"Target Path: {target_md}")
-        print("="*60 + "\n")
-        
-        # 注意：Agent 的总结是在脚本运行后的对话中完成的，
-        # 脚本本身在此处会结束。
-    else:
-        logger.info("Obsidian vault path not configured. Skipping summary prompt.")
+    logger.info(f"🤖 Agent summarizing session starting...")
+    
+    print("\n" + "="*60)
+    print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
+    print("Please read the transcript above and generate a summary note.")
+    print("Note: Saving to Obsidian BiliNotes/ directory.")
+    print("="*60 + "\n")
 
     # 5. 清理文件
     if media_path.exists() and media_path.resolve() != audio_path.resolve():
