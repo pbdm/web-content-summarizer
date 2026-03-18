@@ -5,9 +5,6 @@ from pathlib import Path
 # 项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
-# 配置文件
-CONFIG_FILE = PROJECT_ROOT / "config.json"
-
 # 目录配置
 BIN_DIR = PROJECT_ROOT / "bin"
 TEMP_DIR = PROJECT_ROOT / "temp"

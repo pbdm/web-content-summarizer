@@ -1,4 +1,6 @@
-# 项目备忘录 (OpenCode Context)
+# BiliTranscribe (Zero Config Agent Skill)
+
+一个专为 **OpenCode Agent** 打造的 **Zero Config** 自动化工具。用于下载 Bilibili 视频/音频，提取高精度 ASR 文稿，并利用 Agent 的认知能力生成结构化的 Obsidian 知识笔记。
 
 ## 🚀 启动命令 (One-Liner)
 
@@ -13,55 +15,46 @@ export PYTHONPATH=$PYTHONPATH:.
 ./venv/bin/python3 src/main.py "YOUR_BILI_URL_HERE"
 ```
 
-## 🧠 Agent Skills
+## ✨ 核心特性
 
-⚠️ **重要：** 任何时候执行“视频转录”或“生成笔记”任务时，**必须**首先调用并遵循 **Global** `bili-transcribe` Skill。
+- **Zero Config (无感配置)**: 
+  - 自动检测 GPU/CPU 硬件并优化模型选择（`large-v3` vs `base`）。
+  - 路径自动推断，无需 `config.json`。
+  - Obsidian 库路径已固化在 **Global Skill** 中。
+- **Agent 驱动的智能总结**:
+  - 不仅仅是转录，更通过 Agent 将原始文稿转化为结构清晰的知识笔记。
+  - 内置专家级 **Global** `bili-transcribe` Skill。
+- **极速 Audio-Only 模式**: 默认仅下载最佳音质音频流，极大节省带宽和时间。
+- **双引擎支持**: 完美适配 `whisper` (large-v3) 和 `funasr`。
 
-- **bili-transcribe**: 自动化下载、音频提取及高精度 ASR 转录。
-  - **触发规则**: 当用户提供 BiliBili 链接要求“总结”、“转录”或“笔记”时，**强制加载**此 Skill。
-  - **使用方式**:
-    1. 调用 `Skill(name="bili-transcribe")` 激活全局专家技能。
-    2. 执行脚本 `./venv/bin/python3 src/main.py ...`
-    3. **关键步骤**: 必须等待脚本输出 `🚀 [ACTION REQUIRED]` 提示。
-    4. **关键步骤**: 必须读取脚本生成的原始文稿。
-    5. **关键步骤**: 根据 `bili-transcribe` Skill 的 `PROMPT.md` 生成总结并归档至 Obsidian。
+## 🧠 Agent 协作流程
 
-## ⚙️ 配置文件 (config.json)
+⚠️ **重要：** 任何执行“视频转录”或“生成笔记”任务时，**必须**首先调用并遵循 **Global** `bili-transcribe` Skill。
 
-```json
-{}
-```
+1.  **激活技能**: 调用 `Skill(name="bili-transcribe")`。
+2.  **执行转录**: 运行 `./venv/bin/python3 src/main.py <URL>`。
+3.  **捕获信号**: 脚本输出 `🚀 [ACTION REQUIRED]` 提示时，即表示 ASR 完成。
+4.  **读取总结**: 读取 `output/transcripts/` 下的原始文稿，根据 Skill 的 `PROMPT.md` 生成总结笔记。
+5.  **物理落盘**: 必须使用 `write_file` 将笔记保存至 Obsidian 的 `BiliNotes/` 目录。
 
-## 📁 目录结构
-- `src/`: 源代码
-- `output/`: 视频归档及原始文稿 (`transcripts/`)，日志 (`logs/`)
-- `Global Skill`: `bili-transcribe` 已作为全局专家技能固化
-- `config.json`: 用户配置 (被 git 忽略)
-- `ASR_BENCHMARK.md`: Whisper 与 FunASR 的详细对比评测
+## 📂 目录结构
+
+- `src/`: 核心 Python 处理引擎 (下载/提取/转录/日志)。
+- `output/`: 
+  - `transcripts/`: 原始 ASR 文稿存档。
+  - `logs/`: 详细的执行日志。
+- `bin/`: 存放 FFmpeg 等二进制工具。
+- `ASR_BENCHMARK.md`: Whisper 与 FunASR 的性能对比评测。
 
 ## 🛠️ 更新日志
+
+- **2026-03-07**:
+    - **Zero Config 架构**: 彻底移除 `config.json` 依赖。所有路径配置与硬件优化实现 100% 自动化。
+    - **文档合并**: 将 `README.md` 与 `GEMINI.md` 合并，确立 `GEMINI.md` 为核心指令集。
 - **2026-03-05**:
-    - **结构化日志与性能监控**: 引入 `logging` 模块和 `time_it` 装饰器，实现多级日志持久化及精准的步骤耗时统计（已修复 ASR 生成器延迟计时 BUG）。
-    - **实时进度反馈**: 集成 `tqdm` 进度条，支持转录百分比、预计剩余时间 (ETA) 及处理速度显示。
-    - **硬件加速深度适配**: 完成 **RTX 5070 Ti** (WSL2) 环境构建，优化 Python 环境至 3.12 并配置 CUDA 12.4 + cuDNN，转录效率提升约 20x。
-    - **元数据增强**: 支持提取视频发布日期 (`published`) 并同步至文稿 Frontmatter，强化知识管理维度。
-    - **Skill 全局化**: 迁移 `bili-transcribe` 专家技能至全局路径，实现跨项目、跨场景的认知能力复用。
-- **2026-02-08**:
-    - **Skill 强制性增强**: 在 `AGENTS.md` 中明确了 Skill 的强制调用规则。
-    - **防御性编程**: `src/main.py` 现在会输出 `[ACTION REQUIRED]` 提示，防止 Agent 遗漏 Obsidian 归档步骤。
+    - **结构化日志与性能监控**: 引入 `logging` 模块，修复 ASR 延迟计时 BUG，集成 `tqdm` 实时进度条。
+    - **硬件加速**: 完成 RTX 5070 Ti (WSL2) 深度适配，转录效率提升约 20x。
 - **2026-01-31**:
-    - **bili-transcribe 升级**: 集成 LLM 总结功能 (Agent-driven)。
-    - **架构健壮性优化**: 新增 `setup.sh` 支持一键环境初始化；实现 CUDA/CPU 自动检测与适配；通过 `imageio-ffmpeg` 解决 FFmpeg 二进制依赖问题。
-    - **Workflow 调整**: 原始 ASR 文稿仅保存在本地 `output/transcripts/`，Obsidian (`BiliNotes/`) 存储由 Agent 生成的智能总结笔记。
-- **2026-01-28**:
-    - 完成从 **Gemini** 到 **OpenCode** 的全面迁移。
-    - 迁移所有技能配置至 `.opencode/skills/`。
-    - 更新 `AGENTS.md` 以反映最新的架构和命名。
+    - **bili-transcribe 升级**: 集成 LLM 智能总结功能，实现从视频到 Obsidian 知识库的闭环。
 - **2026-01-27**:
-    - 创建并固化 **bili-transcribe** skill，实现 ASR 流程的标准化。
-    - 优化 ASR 自动化脚本，支持 `venv` 自动检测。
-    - 确立了笔记扁平化管理规范，移除深层目录嵌套。
-- **2026-01-23**: 
-    - 集成 **Obsidian** (Frontmatter + 时间戳跳转)。
-    - 实现 **智能去重** (跳过已存在的下载/音频提取)。
-    - 添加 `config.json` 支持。
+    - **Skill 固化**: 创建并固化全局 `bili-transcribe` 专家技能。
