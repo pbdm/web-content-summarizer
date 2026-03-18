@@ -58,10 +58,6 @@ export PYTHONPATH=$PYTHONPATH:.
 
 ## ⚙️ 配置 (config.json)
 
-> [!NOTE] 
-> 本项目已不再从 `config.json` 读取 `obsidian_vault_path`。该路径已硬编码在 **Global** `bili-transcribe` Skill 中：
-> `/mnt/c/Users/Administrator/Documents/others/content/BiliNotes/`
-
 ```json
 {}
 ```
