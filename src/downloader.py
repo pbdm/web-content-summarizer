@@ -1,11 +1,11 @@
 import yt_dlp
 from pathlib import Path
-from .config import TEMP_DIR, OUTPUT_DIR, FFMPEG_PATH
+from .config import TEMP_DIR, FFMPEG_PATH
 from .logger import logger
 from .utils import time_it
 
 class VideoDownloader:
-    def __init__(self, audio_only=True):
+    def __init__(self, audio_only=True, cookie_header: str | None = None):
         self.audio_only = audio_only
         # 配置 yt-dlp 使用我们本地的 ffmpeg
         self.ydl_opts = {
@@ -16,13 +16,19 @@ class VideoDownloader:
             'quiet': True,
             'no_warnings': True,
         }
+        if cookie_header:
+            self.ydl_opts['http_headers'] = {'Cookie': cookie_header}
         
         # 只有在下载视频时才强制合并为 mp4
         if not audio_only:
             self.ydl_opts['merge_output_format'] = 'mp4'
 
+    def extract_info(self, url: str):
+        with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
+            return ydl.extract_info(url, download=False)
+
     @time_it
-    def download(self, url: str):
+    def download(self, url: str, info: dict | None = None):
         """
         下载并返回 (本地文件路径, UP主姓名, 发布日期)。
         """
@@ -30,7 +36,7 @@ class VideoDownloader:
         
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
             # 1. 预先获取信息
-            info = ydl.extract_info(url, download=False)
+            info = info or ydl.extract_info(url, download=False)
             uploader = info.get('uploader', 'Unknown')
             upload_date = info.get('upload_date', 'Unknown') # 格式通常为 YYYYMMDD
             

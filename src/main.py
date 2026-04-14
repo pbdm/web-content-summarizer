@@ -1,8 +1,6 @@
 import argparse
-import shutil
 import sys
 import os
-import time
 from pathlib import Path
 
 # 将项目根目录添加到 sys.path
@@ -11,9 +9,10 @@ sys.path.append(str(PROJECT_ROOT))
 
 from src.downloader import VideoDownloader
 from src.audio import AudioExtractor
+from src.subtitles import SubtitleFetcher
 from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
-from src.config import OUTPUT_DIR, TEMP_DIR, LOCAL_TRANSCRIPT_DIR, DEFAULT_COMPUTE_TYPE, DEFAULT_DEVICE, DEFAULT_NUM_WORKERS, DEFAULT_MODEL_SIZE
+from src.config import LOCAL_TRANSCRIPT_DIR, DEFAULT_COMPUTE_TYPE, DEFAULT_DEVICE, DEFAULT_NUM_WORKERS, DEFAULT_MODEL_SIZE
 from src.logger import logger
 from src.utils import time_it
 
@@ -28,54 +27,66 @@ def process_pipeline(args):
     """
     完整的处理流水线。
     """
+    subtitle_fetcher = SubtitleFetcher()
     # 初始化模块 (默认为纯音频模式)
-    downloader = VideoDownloader(audio_only=True)
+    downloader = VideoDownloader(audio_only=True, cookie_header=subtitle_fetcher.cookie_header)
     extractor = AudioExtractor()
     transcriber = None 
     formatter = MarkdownFormatter()
+    media_path = None
+    audio_path = None
+    transcript_source = args.engine
 
-    # 1. 下载 (Audio)
-    media_path, uploader, upload_date = downloader.download(args.url)
-    video_title = media_path.stem
+    info = subtitle_fetcher.extract_info(args.url)
+    video_title, uploader, upload_date = subtitle_fetcher.get_video_metadata(info)
 
-    # 2. 转换/标准化音频 (Convert to 16k wav)
-    audio_path = extractor.extract(media_path)
-
-    # 3. 加载模型并转录
-    beam_size = 5 # Default beam size
-    if args.engine == "funasr":
-        logger.info("Engine: FunASR (Lazy Loading...)")
-        try:
-            from src.transcriber_funasr import FunASRTranscriber
-            transcriber = FunASRTranscriber()
-        except Exception as e:
-            logger.error(f"❌ Error loading FunASR: {e}")
-            logger.info("Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead.")
-            sys.exit(1)
+    content_items, subtitle_source, subtitle_language = subtitle_fetcher.fetch(info)
+    if content_items:
+        transcript_source = "subtitle"
+        logger.info(f"✅ Subtitle pipeline selected. Source: {subtitle_source}, Language: {subtitle_language}")
     else:
-        # Whisper 模式
-        compute_type = args.compute_type
-        num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
+        # 1. 下载 (Audio)
+        media_path, uploader, upload_date = downloader.download(args.url, info=info)
+        video_title = media_path.stem
+
+        # 2. 转换/标准化音频 (Convert to 16k wav)
+        audio_path = extractor.extract(media_path)
+
+        # 3. 加载模型并转录
+        beam_size = 5 # Default beam size
+        if args.engine == "funasr":
+            logger.info("Engine: FunASR (Lazy Loading...)")
+            try:
+                from src.transcriber_funasr import FunASRTranscriber
+                transcriber = FunASRTranscriber()
+            except Exception as e:
+                logger.error(f"❌ Error loading FunASR: {e}")
+                logger.info("Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead.")
+                sys.exit(1)
+        else:
+            # Whisper 模式
+            compute_type = args.compute_type
+            num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
+            
+            logger.info(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | Workers: {num_workers} | High-Perf Mode: {args.fast}")
+            transcriber = Transcriber(
+                model_size=args.model, 
+                device=args.device,
+                compute_type=compute_type,
+                num_workers=num_workers
+            )
+            
+        # 统一接口调用
+        logger.info(f"⚡ Starting ASR inference...")
+        content_items = []
+        asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
         
-        logger.info(f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | Workers: {num_workers} | High-Perf Mode: {args.fast}")
-        transcriber = Transcriber(
-            model_size=args.model, 
-            device=args.device,
-            compute_type=compute_type,
-            num_workers=num_workers
-        )
-        
-    # 统一接口调用
-    logger.info(f"⚡ Starting ASR inference...")
-    content_items = []
-    asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
-    
-    # 封装结果
-    for seg in asr_segments:
-        content_items.append(ContentItem(seg.start, seg.text, "speech"))
+        # 封装结果
+        for seg in asr_segments:
+            content_items.append(ContentItem(seg.start, seg.text, "speech"))
 
     # 4. 生成原始 Markdown
-    md_filename = f"{uploader}-{video_title}_{args.engine}.md"
+    md_filename = f"{uploader}-{video_title}_{transcript_source}.md"
     local_md_path = LOCAL_TRANSCRIPT_DIR / md_filename
     
     logger.info(f"📂 Saving raw transcript to local path: {local_md_path}")
@@ -94,10 +105,10 @@ def process_pipeline(args):
     print("="*60 + "\n")
 
     # 5. 清理文件
-    if media_path.exists() and media_path.resolve() != audio_path.resolve():
+    if media_path and media_path.exists() and audio_path and media_path.resolve() != audio_path.resolve():
         os.remove(media_path)
 
-    if not args.keep_audio:
+    if not args.keep_audio and audio_path:
         if audio_path.exists():
             os.remove(audio_path)
             logger.info("🗑️  Temporary audio file removed.")
