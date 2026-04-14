@@ -50,7 +50,82 @@ def process_pipeline(args):
     info = subtitle_fetcher.extract_info(args.url)
     video_title, uploader, upload_date = subtitle_fetcher.get_video_metadata(info)
 
-    content_items, subtitle_source, subtitle_language = subtitle_fetcher.fetch(info)
+    content_items, subtitle_source, subtitle_language = subtitle_fetcher.fetch(
+        info, prefer_subtitle=True
+    )
+
+    if content_items:
+        subtitle_segments = content_items
+        subtitle_src = subtitle_source
+
+        logger.info(f"🔍 Validating AI subtitle with Whisper sample...")
+
+        # 下载音频前 30 秒用于验证
+        temp_extractor = AudioExtractor()
+        try:
+            from src.transcriber import Transcriber
+
+            downloader_preview = VideoDownloader(
+                audio_only=True, cookie_header=subtitle_fetcher.cookie_header
+            )
+            temp_info = subtitle_fetcher.extract_info(args.url)
+            temp_media, _, _ = downloader_preview.download(args.url, info=temp_info)
+            temp_audio = temp_extractor.extract(temp_media)
+
+            transcriber_preview = Transcriber(
+                model_size="base",
+                device=args.device,
+                compute_type=args.compute_type,
+                num_workers=2,
+            )
+            whisper_segments = transcriber_preview.transcribe(temp_audio, beam_size=5)
+
+            # 清理临时文件
+            os.remove(temp_media)
+            if temp_audio.exists():
+                os.remove(temp_audio)
+
+            # 验证逻辑：对比前 5 个有效句子
+            def extract_key_words(segments, count=5):
+                words = []
+                for seg in segments:
+                    text = seg.text.strip()
+                    # 跳过纯符号/音乐/过短的内容
+                    if len(text) < 2:
+                        continue
+                    if text.startswith("♪") and text.endswith("♪"):
+                        continue
+                    words.append(text[:20])
+                    if len(words) >= count:
+                        break
+                return words
+
+            ai_words = extract_key_words(subtitle_segments)
+            whisper_words = extract_key_words(whisper_segments)
+
+            logger.info(f"  AI subtitle words: {ai_words[:3]}")
+            logger.info(f"  Whisper words:  {whisper_words[:3]}")
+
+            # 检查是否匹配（至少 1 个关键词匹配）
+            match_count = sum(
+                1 for w in whisper_words if any(w in aw or aw in w for aw in ai_words)
+            )
+            is_valid = match_count >= 1
+
+            if is_valid:
+                content_items = subtitle_segments
+                transcript_source = "subtitle"
+                logger.info(
+                    f"✅ Subtitle valid ({match_count} match), using AI subtitle"
+                )
+            else:
+                logger.info(f"⚠️ Subtitle invalid (no match), falling back to Whisper")
+                content_items = None
+
+        except Exception as e:
+            logger.warning(f"⚠️ Subtitle validation failed: {e}, using Whisper")
+            content_items = None
+
     if content_items:
         transcript_source = "subtitle"
         logger.info(
@@ -176,6 +251,11 @@ def main():
         "--compute-type",
         default=DEFAULT_COMPUTE_TYPE,
         help=f"Compute type (default: {DEFAULT_COMPUTE_TYPE})",
+    )
+    parser.add_argument(
+        "--subtitle",
+        action="store_true",
+        help="Try to use Bilibili subtitles first (may be unstable)",
     )
 
     args = parser.parse_args()

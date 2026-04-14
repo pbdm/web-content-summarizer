@@ -10,17 +10,29 @@ BIN_DIR = PROJECT_ROOT / "bin"
 TEMP_DIR = PROJECT_ROOT / "temp"
 TRANSCRIPT_DIR = TEMP_DIR / "transcripts"  # 转录文稿存档
 
-# FFmpeg 路径
-FFMPEG_PATH = BIN_DIR / "ffmpeg"
-FFPROBE_PATH = BIN_DIR / "ffprobe"
+
+# FFmpeg 路径 - 优先使用项目 bin/ 目录，其次使用系统路径
+def find_ffmpeg(name):
+    if BIN_DIR.exists():
+        path = BIN_DIR / name
+        if path.exists():
+            return path
+    import shutil
+
+    system_path = shutil.which(name)
+    if system_path:
+        return Path(system_path)
+    if BIN_DIR.exists():
+        return BIN_DIR / name  # 返回 bin/ 路径，让后续检查失败有明确错误
+    raise FileNotFoundError(f"{name} not found in bin/ or system PATH")
+
+
+FFMPEG_PATH = find_ffmpeg("ffmpeg")
+FFPROBE_PATH = find_ffmpeg("ffprobe")
 
 # 确保目录存在
 TEMP_DIR.mkdir(exist_ok=True)
 TRANSCRIPT_DIR.mkdir(exist_ok=True)
-
-# 检查 FFmpeg 是否存在
-if not FFMPEG_PATH.exists():
-    raise FileNotFoundError(f"FFmpeg binary not found at {FFMPEG_PATH}")
 
 
 # 模型配置

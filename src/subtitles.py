@@ -61,7 +61,11 @@ class SubtitleFetcher:
         if not raw_text:
             return None
 
-        lines = [line.strip() for line in raw_text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+        lines = [
+            line.strip()
+            for line in raw_text.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
         if not lines:
             return None
 
@@ -87,14 +91,23 @@ class SubtitleFetcher:
         return title, uploader, upload_date
 
     @time_it
-    def fetch(self, info: dict):
+    def fetch(self, info: dict, prefer_subtitle: bool = False):
         manual_tracks = info.get("subtitles") or {}
         auto_tracks = info.get("automatic_captions") or {}
 
-        if not manual_tracks and not auto_tracks:
+        if prefer_subtitle and not manual_tracks and not auto_tracks:
             manual_tracks = self._fetch_bilibili_player_subtitles(info) or {}
 
-        for source_name, track_map in (("manual", manual_tracks), ("auto", auto_tracks)):
+        enable_ai_subtitle = prefer_subtitle
+        ai_segments = None
+
+        for source_name, track_map in (
+            ("manual", manual_tracks),
+            ("auto", auto_tracks),
+        ):
+            if not enable_ai_subtitle:
+                break
+
             language = self._pick_language(track_map)
             if not language:
                 continue
@@ -103,7 +116,9 @@ class SubtitleFetcher:
             if not entry or not entry.get("url"):
                 continue
 
-            logger.info(f"📝 Using {source_name} subtitle track: {language} ({entry.get('ext', 'unknown')})")
+            logger.info(
+                f"📝 Using {source_name} subtitle track: {language} ({entry.get('ext', 'unknown')})"
+            )
 
             try:
                 raw_text = self._download_text(entry)
@@ -113,12 +128,18 @@ class SubtitleFetcher:
                 continue
 
             if segments:
-                return segments, source_name, language
+                ai_segments = (segments, source_name, language)
+                break
+
+        if ai_segments:
+            return ai_segments
 
         logger.info("ℹ️ No usable subtitle track found, falling back to ASR.")
         return None, None, None
 
-    def _fetch_bilibili_player_subtitles(self, info: dict) -> dict:
+    def _fetch_bilibili_player_subtitles(
+        self, info: dict, retries: int = 8, delay: float = 2.0
+    ) -> dict:
         bvid = info.get("id")
         if not bvid:
             return {}
@@ -127,14 +148,54 @@ class SubtitleFetcher:
         if not cid:
             return {}
 
-        player_payload = self._get_json(
-            "https://api.bilibili.com/x/player/v2",
-            params={"bvid": bvid, "cid": cid},
-        )
-        subtitle_items = (((player_payload or {}).get("data") or {}).get("subtitle") or {}).get("subtitles") or []
-        if subtitle_items:
-            logger.info(f"📝 Loaded {len(subtitle_items)} subtitle tracks from Bilibili player API.")
-        return self._normalize_bilibili_tracks(subtitle_items)
+        best_tracks = {}
+        best_count = 0
+
+        for attempt in range(retries):
+            player_payload = self._get_json(
+                "https://api.bilibili.com/x/player/v2",
+                params={"bvid": bvid, "cid": cid},
+            )
+            subtitle_data = ((player_payload or {}).get("data") or {}).get(
+                "subtitle"
+            ) or {}
+            subtitle_items = subtitle_data.get("subtitles") or []
+
+            # 如果没有字幕，等待后重试
+            if not subtitle_items:
+                if attempt < retries - 1:
+                    import time
+
+                    logger.info(
+                        f"📝 Attempt {attempt + 1}: no subtitles yet, waiting..."
+                    )
+                    time.sleep(delay)
+                continue
+
+            tracks = self._normalize_bilibili_tracks(subtitle_items)
+
+            lang = "ai-zh"
+            if lang in tracks:
+                entry = tracks[lang][0]
+                try:
+                    raw = self._download_text(entry)
+                    data = json.loads(raw)
+                    body = data.get("body", [])
+                    count = len(body)
+
+                    logger.info(
+                        f"📝 Attempt {attempt + 1}: {lang} has {count} segments"
+                    )
+
+                    if count > best_count:
+                        best_count = count
+                        best_tracks = tracks
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to fetch subtitle: {e}")
+
+        if best_tracks:
+            logger.info(f"📝 Using best subtitle with {best_count} segments")
+        return best_tracks
 
     def _resolve_bilibili_cid(self, bvid: str) -> int | None:
         view_payload = self._get_json(
@@ -253,7 +314,9 @@ class SubtitleFetcher:
             for item in payload["body"]:
                 text = (item.get("content") or "").strip()
                 if text:
-                    segments.append(SubtitleSegment(start=float(item.get("from", 0.0)), text=text))
+                    segments.append(
+                        SubtitleSegment(start=float(item.get("from", 0.0)), text=text)
+                    )
             return segments
 
         if isinstance(payload, dict) and isinstance(payload.get("events"), list):
@@ -261,7 +324,11 @@ class SubtitleFetcher:
                 segs = event.get("segs") or []
                 text = "".join(seg.get("utf8", "") for seg in segs).strip()
                 if text:
-                    segments.append(SubtitleSegment(start=float(event.get("tStartMs", 0)) / 1000.0, text=text))
+                    segments.append(
+                        SubtitleSegment(
+                            start=float(event.get("tStartMs", 0)) / 1000.0, text=text
+                        )
+                    )
             return segments
 
         if isinstance(payload, list):
@@ -280,7 +347,9 @@ class SubtitleFetcher:
         blocks = re.split(r"\n\s*\n", raw_text.strip())
 
         for block in blocks:
-            lines = [line.strip("\ufeff") for line in block.splitlines() if line.strip()]
+            lines = [
+                line.strip("\ufeff") for line in block.splitlines() if line.strip()
+            ]
             if not lines or lines[0] == "WEBVTT":
                 continue
 
@@ -288,13 +357,19 @@ class SubtitleFetcher:
             if not timestamp_line:
                 continue
 
-            text_lines = [line for line in lines if line != timestamp_line and "-->" not in line and not line.isdigit()]
+            text_lines = [
+                line
+                for line in lines
+                if line != timestamp_line and "-->" not in line and not line.isdigit()
+            ]
             text = "\n".join(text_lines).strip()
             if not text:
                 continue
 
             start_text = timestamp_line.split("-->", 1)[0].strip()
-            segments.append(SubtitleSegment(start=self._parse_timestamp(start_text), text=text))
+            segments.append(
+                SubtitleSegment(start=self._parse_timestamp(start_text), text=text)
+            )
 
         return segments
 
@@ -303,7 +378,9 @@ class SubtitleFetcher:
         blocks = re.split(r"\n\s*\n", raw_text.strip())
 
         for block in blocks:
-            lines = [line.strip("\ufeff") for line in block.splitlines() if line.strip()]
+            lines = [
+                line.strip("\ufeff") for line in block.splitlines() if line.strip()
+            ]
             if len(lines) < 2:
                 continue
 
@@ -311,13 +388,17 @@ class SubtitleFetcher:
             if not timestamp_line:
                 continue
 
-            text_lines = [line for line in lines if line != timestamp_line and not line.isdigit()]
+            text_lines = [
+                line for line in lines if line != timestamp_line and not line.isdigit()
+            ]
             text = "\n".join(text_lines).strip()
             if not text:
                 continue
 
             start_text = timestamp_line.split("-->", 1)[0].strip()
-            segments.append(SubtitleSegment(start=self._parse_timestamp(start_text), text=text))
+            segments.append(
+                SubtitleSegment(start=self._parse_timestamp(start_text), text=text)
+            )
 
         return segments
 
