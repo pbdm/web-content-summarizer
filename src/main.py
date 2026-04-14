@@ -31,17 +31,36 @@ class ContentItem:
 
 
 @time_it
+def select_model_by_duration(
+    duration_seconds: float, user_model: str, user_fast: bool, default_model: str
+):
+    """
+    根据视频时长自动选择模型参数
+    如果用户明确指定了参数，则使用用户指定的
+    """
+    duration_minutes = duration_seconds / 60
+
+    # 用户明确指定了 --fast
+    if user_fast:
+        return "base", True
+
+    # 用户明确指定了 --model（不等于默认值）
+    if user_model != default_model:
+        return user_model, user_fast
+
+    # 自动选择
+    if duration_minutes < 10:
+        # 短视频：用高质量模型
+        return default_model, False
+    elif duration_minutes < 30:
+        # 中等：用 base
+        return "base", False
+    else:
+        # 长视频：用 base + fast
+        return "base", True
+
+
 def process_pipeline(args):
-    """
-    完整的处理流水线。
-    """
-    subtitle_fetcher = SubtitleFetcher()
-    # 初始化模块 (默认为纯音频模式)
-    downloader = VideoDownloader(
-        audio_only=True, cookie_header=subtitle_fetcher.cookie_header
-    )
-    extractor = AudioExtractor()
-    transcriber = None
     formatter = MarkdownFormatter()
     media_path = None
     audio_path = None
@@ -49,6 +68,22 @@ def process_pipeline(args):
 
     info = subtitle_fetcher.extract_info(args.url)
     video_title, uploader, upload_date = subtitle_fetcher.get_video_metadata(info)
+
+    # 获取视频时长并自动选择模型
+    duration = info.get("duration", 0)
+    duration_minutes = duration / 60 if duration else 0
+    logger.info(f"📹 Video duration: {duration_minutes:.1f} minutes")
+
+    # 自动选择模型
+    auto_model, auto_fast = select_model_by_duration(
+        duration, args.model, args.fast, DEFAULT_MODEL_SIZE
+    )
+
+    # 如果参数被自动调整了，记录一下
+    if args.model != auto_model or args.fast != auto_fast:
+        logger.info(f"⚡ Auto-selected model: {auto_model}, fast: {auto_fast}")
+        args.model = auto_model
+        args.fast = auto_fast
 
     content_items, subtitle_source, subtitle_language = subtitle_fetcher.fetch(
         info, prefer_subtitle=True
