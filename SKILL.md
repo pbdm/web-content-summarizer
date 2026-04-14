@@ -24,6 +24,32 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 - B站视频笔记 → `/mnt/c/code/others/content/BiliNotes/`
 - 网页/PDF 笔记 → `/mnt/c/code/others/content/WebNotes/`
 
+## 网页文章处理流程
+
+使用分层提取策略，确保高成功率：
+
+### 1. 复杂性梯度提取 (Layered Extraction)
+
+- **Step 1 (快速)**: 调用 `defuddle parse <URL> --md`
+- **Step 2 (自愈)**: 若 Step 1 失败或结果过短，自动回退至 `web_fetch` 进行全量抓取
+- **Step 3 (PDF)**: 检测到 PDF 后，优先尝试 `web_fetch` 的 PDF 解析模式；若失效，引导用户提供本地路径
+
+### 2. 强制自检与元数据声明
+
+- **元数据校验**: Agent 必须在内存中构建元数据字典：`{title, author, date}`
+- **缺失处理**: 若无法通过原文判定日期，统一格式化为 `YYYY-MM-DD (Estimated)`
+- **显式声明**: Agent **必须**在回复开头声明校验结果："经实时元数据校验，[标题] 来源于 [机构/作者]"
+
+### 3. 智能总结
+
+- **触发机制**: 成功提取内容后，Agent 必须启动总结流程
+- **创作指令**: 严格遵循项目根目录 `PROMPT.md` 模版和提取原则
+- **校验规范**: 落盘前**必须**从原文读取 `author` 字段
+- **输出目标**:
+  - **路径**: `/mnt/c/code/others/content/WebNotes/`
+  - **命名规范**: `[作者/机构]-[文章标题].md`
+- **强制落盘**: Agent 在回复中展示总结的同时，**必须**同步执行 `write_file` 物理保存
+
 ## B站视频处理流程
 
 本 Skill 封装了从视频 URL 到原始 ASR 文稿（Markdown 格式）的完整处理流程。
@@ -51,60 +77,18 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 ### 4. 格式化输出 (Formatting)
 
-使用 `src/formatter.py` 生成包含元数据（来源 URL、UP 主、日期）的原始文稿，保存到本地 `output/transcripts/`。
+使用 `src/formatter.py` 生成包含元数据（来源 URL、UP 主、日期）的原始文稿，保存到本地 `temp/transcripts/`。
 
 ### 5. 智能总结 (Agentic Summarization)
 
 - **触发机制**：脚本输出 `🚀 [ACTION REQUIRED]` 提示后，Agent 必须启动总结流程。
 - **创作指令**：严格遵循项目根目录 `PROMPT.md` 模版和提取原则。
 - **校验规范**：落盘前**必须**从原始文稿读取 `author` 字段，并在回复中显式向用户声明校验后的 UP 主名称。
+- **输出目标**:
+  - **路径**: `/mnt/c/code/others/content/BiliNotes/`
+  - **命名规范**: `[UP主名称]-[原文件名].md`
 - **强制落盘**：Agent 在回复中展示总结的同时，**必须**同步执行 `write_file` 物理保存。
 
 ### 6. 资源清理 (Cleanup)
 
-- 转录完成后，自动删除临时音频文件。仅保留 `output/transcripts/` 下的 Markdown 原始文稿。
-
-## 使用指南
-
-### 快速执行
-
-```bash
-./venv/bin/python3 src/main.py <URL> --model large-v3 --device cuda --compute-type float16
-```
-
-或使用简化脚本：
-
-```bash
-./venv/bin/python3 src/transcribe_url.py <URL>
-```
-
-### 关键参数
-
-- `--engine`: `whisper` 或 `funasr`。
-- `--model`: 指定模型大小（如 `base`, `large-v3`）。
-- `--fast`: 开启高性能模式（增加 worker 数量）。
-
-### 硬件自适应
-
-系统自动检测 GPU/CPU 并选择最优配置：
-- **GPU**: 使用 `large-v3` + `float16`
-- **CPU**: 自动回退到 `base` + `int8`
-
-详见 `docs/config_guide.md`。
-
-## 项目结构
-
-```
-WebContentSummarizer/               ← Skill 根目录
-├── SKILL.md                      ← 本文件 (也是 AGENTS.md 的软链接)
-├── PROMPT.md                     ← 统一的内容总结 Prompt
-├── docs/                        ← 文档
-│   ├── ASR_BENCHMARK.md        # Whisper vs FunASR 性能对比
-│   └── config_guide.md         # 配置与环境指南（含 ASR 策略）
-├── src/                         ← 源代码 (入口 + 核心模块)
-├── output/
-│   └── transcripts/             # 原始转录文稿
-├── venv/                       # Python 虚拟环境
-├── requirements.txt
-└── setup.sh
-```
+- 转录完成后，自动删除临时音频文件。仅保留 `temp/transcripts/` 下的 Markdown 原始文稿。
