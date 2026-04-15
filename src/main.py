@@ -65,6 +65,9 @@ def process_pipeline(args):
     media_path = None
     audio_path = None
     transcript_source = args.engine
+    subtitle_fetcher = SubtitleFetcher()
+    downloader = VideoDownloader()
+    extractor = AudioExtractor()
 
     info = subtitle_fetcher.extract_info(args.url)
     video_title, uploader, upload_date = subtitle_fetcher.get_video_metadata(info)
@@ -98,8 +101,6 @@ def process_pipeline(args):
         # 下载音频前 30 秒用于验证
         temp_extractor = AudioExtractor()
         try:
-            from src.transcriber import Transcriber
-
             downloader_preview = VideoDownloader(
                 audio_only=True, cookie_header=subtitle_fetcher.cookie_header
             )
