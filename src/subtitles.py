@@ -52,6 +52,44 @@ class SubtitleFetcher:
         if self.cookie_header:
             self.ydl_opts["http_headers"] = {"Cookie": self.cookie_header}
 
+    def _extract_bvid(self, url: str) -> str | None:
+        patterns = [
+            r"bv[Ii]([A-Za-z0-9]{10})",
+            r"BV([A-Za-z0-9]{10})",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url, re.IGNORECASE)
+            if match:
+                bvid = match.group(1) if match.group(1) else match.group(0)
+                if len(bvid) == 10:
+                    return f"BV{bvid}"
+        return None
+
+    def _get_bilibili_metadata(self, url: str) -> dict | None:
+        bvid = self._extract_bvid(url)
+        if not bvid:
+            return None
+
+        api_url = (
+            f"https://api.bilibili.com/x/web-interface/view?{urlencode({'bvid': bvid})}"
+        )
+        headers = {
+            "User-Agent": self.DEFAULT_USER_AGENT,
+            "Referer": "https://www.bilibili.com/",
+        }
+        if self.cookie_header:
+            headers["Cookie"] = self.cookie_header
+
+        try:
+            req = Request(api_url, headers=headers)
+            with urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode())
+                if data.get("code") == 0:
+                    return data.get("data")
+        except Exception as e:
+            logger.warning(f"Bilibili API metadata fetch failed: {e}")
+        return None
+
     @staticmethod
     def _load_cookie_header(cookie_path: Path) -> str | None:
         if not cookie_path.exists():
@@ -76,8 +114,29 @@ class SubtitleFetcher:
         return None
 
     def extract_info(self, url: str):
-        with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
-            return ydl.extract_info(url, download=False)
+        try:
+            with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
+                return ydl.extract_info(url, download=False)
+        except Exception as e:
+            logger.warning(f"yt-dlp extract failed: {e}, trying Bilibili API...")
+            metadata = self._get_bilibili_metadata(url)
+            if metadata:
+                pubdate = metadata.get("pubdate")
+                if pubdate:
+                    from datetime import datetime
+
+                    upload_date = datetime.fromtimestamp(pubdate).strftime("%Y%m%d")
+                else:
+                    upload_date = "Unknown"
+                return {
+                    "id": metadata.get("aid"),
+                    "title": metadata.get("title"),
+                    "uploader": metadata.get("owner", {}).get("name"),
+                    "upload_date": upload_date,
+                    "duration": metadata.get("duration"),
+                    "description": metadata.get("desc"),
+                }
+            raise
 
     @staticmethod
     def get_video_metadata(info: dict):

@@ -3,7 +3,6 @@ import sys
 import os
 from pathlib import Path
 
-# 将项目根目录添加到 sys.path
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 sys.path.append(str(PROJECT_ROOT))
 
@@ -27,36 +26,23 @@ class ContentItem:
     def __init__(self, start, text, type="speech"):
         self.start = start
         self.text = text
-        self.type = type  # "speech" or "ocr"
+        self.type = type
 
 
 @time_it
 def select_model_by_duration(
     duration_seconds: float, user_model: str, user_fast: bool, default_model: str
 ):
-    """
-    根据视频时长自动选择模型参数
-    如果用户明确指定了参数，则使用用户指定的
-    """
     duration_minutes = duration_seconds / 60
-
-    # 用户明确指定了 --fast
     if user_fast:
         return "base", True
-
-    # 用户明确指定了 --model（不等于默认值）
     if user_model != default_model:
         return user_model, user_fast
-
-    # 自动选择
     if duration_minutes < 10:
-        # 短视频：用高质量模型
         return default_model, False
     elif duration_minutes < 30:
-        # 中等：用 base
         return "base", False
     else:
-        # 长视频：用 base + fast
         return "base", True
 
 
@@ -64,7 +50,7 @@ def process_pipeline(args):
     formatter = MarkdownFormatter()
     media_path = None
     audio_path = None
-    transcript_source = args.engine
+
     subtitle_fetcher = SubtitleFetcher()
     downloader = VideoDownloader()
     extractor = AudioExtractor()
@@ -72,130 +58,47 @@ def process_pipeline(args):
     info = subtitle_fetcher.extract_info(args.url)
     video_title, uploader, upload_date = subtitle_fetcher.get_video_metadata(info)
 
-    # 获取视频时长并自动选择模型
     duration = info.get("duration", 0)
     duration_minutes = duration / 60 if duration else 0
     logger.info(f"📹 Video duration: {duration_minutes:.1f} minutes")
 
-    # 自动选择模型
     auto_model, auto_fast = select_model_by_duration(
         duration, args.model, args.fast, DEFAULT_MODEL_SIZE
     )
-
-    # 如果参数被自动调整了，记录一下
     if args.model != auto_model or args.fast != auto_fast:
         logger.info(f"⚡ Auto-selected model: {auto_model}, fast: {auto_fast}")
         args.model = auto_model
         args.fast = auto_fast
 
+    # 优先尝试使用 B站字幕
     content_items, subtitle_source, subtitle_language = subtitle_fetcher.fetch(
         info, prefer_subtitle=True
     )
 
-    if content_items:
-        subtitle_segments = content_items
-        subtitle_src = subtitle_source
+    if not content_items:
+        logger.info("ℹ️ No usable subtitle track found, falling back to ASR.")
 
-        logger.info(f"🔍 Validating AI subtitle with Whisper sample...")
-
-        # 下载音频前 30 秒用于验证
-        temp_extractor = AudioExtractor()
-        try:
-            downloader_preview = VideoDownloader(
-                audio_only=True, cookie_header=subtitle_fetcher.cookie_header
-            )
-            temp_info = subtitle_fetcher.extract_info(args.url)
-            temp_media, _, _ = downloader_preview.download(args.url, info=temp_info)
-            temp_audio = temp_extractor.extract(temp_media)
-
-            transcriber_preview = Transcriber(
-                model_size="base",
-                device=args.device,
-                compute_type=args.compute_type,
-                num_workers=2,
-            )
-            whisper_segments = transcriber_preview.transcribe(temp_audio, beam_size=5)
-
-            # 清理临时文件
-            os.remove(temp_media)
-            if temp_audio.exists():
-                os.remove(temp_audio)
-
-            # 验证逻辑：对比前 5 个有效句子
-            def extract_key_words(segments, count=5):
-                words = []
-                for seg in segments:
-                    text = seg.text.strip()
-                    # 跳过纯符号/音乐/过短的内容
-                    if len(text) < 2:
-                        continue
-                    if text.startswith("♪") and text.endswith("♪"):
-                        continue
-                    words.append(text[:20])
-                    if len(words) >= count:
-                        break
-                return words
-
-            ai_words = extract_key_words(subtitle_segments)
-            whisper_words = extract_key_words(whisper_segments)
-
-            logger.info(f"  AI subtitle words: {ai_words[:3]}")
-            logger.info(f"  Whisper words:  {whisper_words[:3]}")
-
-            # 检查是否匹配（至少 1 个关键词匹配）
-            match_count = sum(
-                1 for w in whisper_words if any(w in aw or aw in w for aw in ai_words)
-            )
-            is_valid = match_count >= 1
-
-            if is_valid:
-                content_items = subtitle_segments
-                transcript_source = "subtitle"
-                logger.info(
-                    f"✅ Subtitle valid ({match_count} match), using AI subtitle"
-                )
-            else:
-                logger.info(f"⚠️ Subtitle invalid (no match), falling back to Whisper")
-                content_items = None
-
-        except Exception as e:
-            logger.warning(f"⚠️ Subtitle validation failed: {e}, using Whisper")
-            content_items = None
-
-    if content_items:
-        transcript_source = "subtitle"
-        logger.info(
-            f"✅ Subtitle pipeline selected. Source: {subtitle_source}, Language: {subtitle_language}"
-        )
-    else:
-        # 1. 下载 (Audio)
+        # 1. 下载音频
         media_path, uploader, upload_date = downloader.download(args.url, info=info)
         video_title = media_path.stem
 
-        # 2. 转换/标准化音频 (Convert to 16k wav)
+        # 2. 提取音频
         audio_path = extractor.extract(media_path)
 
-        # 3. 加载模型并转录
-        beam_size = 5  # Default beam size
+        # 3. 转录
         if args.engine == "funasr":
-            logger.info("Engine: FunASR (Lazy Loading...)")
             try:
                 from src.transcriber_funasr import FunASRTranscriber
 
                 transcriber = FunASRTranscriber()
             except Exception as e:
-                logger.error(f"❌ Error loading FunASR: {e}")
-                logger.info(
-                    "Hint: FunASR requires additional libraries like torchaudio. If they are broken, use 'whisper' engine instead."
-                )
+                logger.error(f"❌ FunASR load error: {e}")
                 sys.exit(1)
         else:
-            # Whisper 模式
             compute_type = args.compute_type
             num_workers = 4 if args.fast else DEFAULT_NUM_WORKERS
-
             logger.info(
-                f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | Workers: {num_workers} | High-Perf Mode: {args.fast}"
+                f"Engine: Whisper ({args.model}) | Device: {args.device} | Compute: {compute_type} | Workers: {num_workers}"
             )
             transcriber = Transcriber(
                 model_size=args.model,
@@ -204,20 +107,21 @@ def process_pipeline(args):
                 num_workers=num_workers,
             )
 
-        # 统一接口调用
-        logger.info(f"⚡ Starting ASR inference...")
+        logger.info("⚡ Starting ASR inference...")
         content_items = []
-        asr_segments = transcriber.transcribe(audio_path, beam_size=beam_size)
-
-        # 封装结果
-        for seg in asr_segments:
+        for seg in transcriber.transcribe(audio_path):
             content_items.append(ContentItem(seg.start, seg.text, "speech"))
 
-    # 4. 生成原始 Markdown
+        transcript_source = "whisper"
+    else:
+        transcript_source = "subtitle"
+        logger.info(f"✅ Using {subtitle_source} subtitle")
+
+    # 4. 保存原始文稿
     md_filename = f"{uploader}-{video_title}_{transcript_source}.md"
     local_md_path = TRANSCRIPT_DIR / md_filename
 
-    logger.info(f"📂 Saving raw transcript to local path: {local_md_path}")
+    logger.info(f"📂 Saving raw transcript to: {local_md_path}")
     formatter.save(
         content_items,
         local_md_path,
@@ -226,12 +130,7 @@ def process_pipeline(args):
         uploader=uploader,
         upload_date=upload_date,
     )
-
-    # 关键：打印特定的成功标识，供 Agent 识别
     print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
-
-    # 6. 提示 Agent 进行 Obsidian 智能总结 (Anti-Omission Step)
-    logger.info(f"🤖 Agent summarizing session starting...")
 
     print("\n" + "=" * 60)
     print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
@@ -239,19 +138,12 @@ def process_pipeline(args):
     print("Note: Saving to Obsidian BiliNotes/ directory.")
     print("=" * 60 + "\n")
 
-    # 5. 清理文件
-    if (
-        media_path
-        and media_path.exists()
-        and audio_path
-        and media_path.resolve() != audio_path.resolve()
-    ):
+    # 5. 清理临时文件
+    if media_path and media_path.exists():
         os.remove(media_path)
-
-    if not args.keep_audio and audio_path:
-        if audio_path.exists():
-            os.remove(audio_path)
-            logger.info("🗑️  Temporary audio file removed.")
+    if not args.keep_audio and audio_path and audio_path.exists():
+        os.remove(audio_path)
+        logger.info("🗑️  Temporary audio file removed.")
 
 
 def main():
@@ -271,27 +163,16 @@ def main():
         "--engine",
         choices=["whisper", "funasr"],
         default="whisper",
-        help="ASR engine to use (default: whisper)",
+        help="ASR engine (default: whisper)",
     )
+    parser.add_argument("--fast", action="store_true", help="Speed mode")
     parser.add_argument(
-        "--fast",
-        action="store_true",
-        help="Speed mode: uses lower beam size and quantization",
-    )
-    parser.add_argument(
-        "--device",
-        default=DEFAULT_DEVICE,
-        help=f"Device to use (default: {DEFAULT_DEVICE})",
+        "--device", default=DEFAULT_DEVICE, help=f"Device (default: {DEFAULT_DEVICE})"
     )
     parser.add_argument(
         "--compute-type",
         default=DEFAULT_COMPUTE_TYPE,
         help=f"Compute type (default: {DEFAULT_COMPUTE_TYPE})",
-    )
-    parser.add_argument(
-        "--subtitle",
-        action="store_true",
-        help="Try to use Bilibili subtitles first (may be unstable)",
     )
 
     args = parser.parse_args()
