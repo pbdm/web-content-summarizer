@@ -8,6 +8,7 @@ sys.path.append(str(PROJECT_ROOT))
 
 from src.downloader import VideoDownloader
 from src.audio import AudioExtractor
+from src.utils import sanitize_filename
 from src.subtitles import SubtitleFetcher
 from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
@@ -118,7 +119,7 @@ def process_pipeline(args):
         logger.info(f"✅ Using {subtitle_source} subtitle")
 
     # 4. 保存原始文稿
-    md_filename = f"{uploader}-{video_title}_{transcript_source}.md"
+    md_filename = f"{uploader}-{sanitize_filename(video_title)}_{transcript_source}.md"
     local_md_path = TRANSCRIPT_DIR / md_filename
 
     logger.info(f"📂 Saving raw transcript to: {local_md_path}")

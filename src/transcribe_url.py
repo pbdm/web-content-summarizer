@@ -44,6 +44,10 @@ def run_bilibili(url, engine="whisper", model="large-v3", fast=False):
 def run_web_fetch(url: str):
     """网页/PDF 内容提取"""
     import urllib.request
+    import sys
+
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))
+    from utils import sanitize_filename
 
     BILINOTES_DIR.mkdir(parents=True, exist_ok=True)
     WEBNOTES_DIR.mkdir(parents=True, exist_ok=True)
@@ -71,7 +75,7 @@ def run_web_fetch(url: str):
             if result and len(result) > 500:
                 title_match = re.search(r"<title>(.*?)</title>", result, re.I)
                 title = title_match.group(1)[:50] if title_match else "untitled"
-                safe_title = "".join(c for c in title if c.isalnum() or c in " _-")
+                safe_title = sanitize_filename(title)
                 output = WEBNOTES_DIR / f"{safe_title}.md"
                 output.write_text(result)
                 print(f"✅ Web page saved to: {output}")
@@ -86,7 +90,7 @@ def run_web_fetch(url: str):
             if result:
                 title_match = re.search(r"<title>(.*?)</title>", result, re.I)
                 title = title_match.group(1)[:50] if title_match else "untitled"
-                safe_title = "".join(c for c in title if c.isalnum() or c in " _-")
+                safe_title = sanitize_filename(title)
                 output = WEBNOTES_DIR / f"{safe_title}.md"
                 output.write_text(result)
                 print(f"✅ Web page saved to: {output}")
