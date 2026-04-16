@@ -1,14 +1,29 @@
-import os
 import json
 from pathlib import Path
 
 # 项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
-# 目录配置
+# 加载路径配置
+PATHS_FILE = PROJECT_ROOT / "paths.json"
+if PATHS_FILE.exists():
+    with open(PATHS_FILE) as f:
+        PATHS = json.load(f)
+else:
+    PATHS = {}
+
+# 目录配置 - 从 paths.json 读取，默认为项目目录
+TMP_REL = PATHS.get("TEMP_DIR", "temp")
+OUTPUT_REL = PATHS.get("OUTPUT_DIR", "output")
+
 BIN_DIR = PROJECT_ROOT / "bin"
-TEMP_DIR = PROJECT_ROOT / "temp"
-TRANSCRIPT_DIR = TEMP_DIR / "transcripts"  # 转录文稿存档
+TEMP_DIR = PROJECT_ROOT / TMP_REL
+OUTPUT_DIR = (
+    PROJECT_ROOT / OUTPUT_REL
+    if Path(OUTPUT_REL).is_absolute()
+    else PROJECT_ROOT / OUTPUT_REL
+)
+TRANSCRIPT_DIR = TEMP_DIR / "transcripts"  # 转录文稿存档（临时）
 
 
 # FFmpeg 路径 - 优先使用项目 bin/ 目录，其次使用系统路径
@@ -33,6 +48,10 @@ FFPROBE_PATH = find_ffmpeg("ffprobe")
 # 确保目录存在
 TEMP_DIR.mkdir(exist_ok=True)
 TRANSCRIPT_DIR.mkdir(exist_ok=True)
+try:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"WARNING: Cannot create OUTPUT_DIR: {e}")
 
 
 # 模型配置
@@ -42,15 +61,12 @@ def get_default_device():
 
         return "cuda" if torch.cuda.is_available() else "cpu"
     except ImportError:
-        # 如果没装 torch，尝试通过 faster-whisper 的方式检测 (这里简单 fallback)
         return "cpu"
 
 
 DEFAULT_DEVICE = get_default_device()
-# 根据设备选择最优计算类型和默认模型
 DEFAULT_COMPUTE_TYPE = "float16" if DEFAULT_DEVICE == "cuda" else "int8"
 DEFAULT_MODEL_SIZE = "large-v3" if DEFAULT_DEVICE == "cuda" else "base"
-# 对于 RTX 5070 Ti (16GB)，2 个 worker 是平衡性能与显存的最佳选择
 DEFAULT_NUM_WORKERS = 2 if DEFAULT_DEVICE == "cuda" else 4
 
 print(

@@ -14,6 +14,7 @@ from src.transcriber import Transcriber
 from src.formatter import MarkdownFormatter
 from src.config import (
     TRANSCRIPT_DIR,
+    OUTPUT_DIR,
     DEFAULT_COMPUTE_TYPE,
     DEFAULT_DEVICE,
     DEFAULT_NUM_WORKERS,
@@ -118,9 +119,9 @@ def process_pipeline(args):
         transcript_source = "subtitle"
         logger.info(f"✅ Using {subtitle_source} subtitle")
 
-    # 4. 保存原始文稿
+    # 4. 保存原始文稿到统一输出目录
     md_filename = f"{uploader}-{sanitize_filename(video_title)}_{transcript_source}.md"
-    local_md_path = TRANSCRIPT_DIR / md_filename
+    local_md_path = OUTPUT_DIR / md_filename
 
     logger.info(f"📂 Saving raw transcript to: {local_md_path}")
     formatter.save(
@@ -136,7 +137,7 @@ def process_pipeline(args):
     print("\n" + "=" * 60)
     print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
     print("Please read the transcript above and generate a summary note.")
-    print("Note: Saving to Obsidian BiliNotes/ directory.")
+    print("Note: Saving to Obsidian WebNotes/ directory.")
     print("=" * 60 + "\n")
 
     # 5. 清理临时文件

@@ -5,8 +5,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
-BILINOTES_DIR = Path("/mnt/c/code/others/content/BiliNotes")
-WEBNOTES_DIR = Path("/mnt/c/code/others/content/WebNotes")
+from src.config import OUTPUT_DIR
 
 
 def detect_url_type(url: str) -> str:
@@ -49,8 +48,7 @@ def run_web_fetch(url: str):
     sys.path.insert(0, str(PROJECT_ROOT / "src"))
     from utils import sanitize_filename
 
-    BILINOTES_DIR.mkdir(parents=True, exist_ok=True)
-    WEBNOTES_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     if url.lower().endswith(".pdf"):
         print(f"📄 Processing PDF: {url}")
@@ -60,7 +58,7 @@ def run_web_fetch(url: str):
         try:
             with urllib.request.urlopen(req, timeout=60) as response:
                 content = response.read()
-                output = WEBNOTES_DIR / f"downloaded_{Path(url).name}"
+                output = OUTPUT_DIR / f"downloaded_{Path(url).name}"
                 output.write_bytes(content)
                 print(f"✅ PDF saved to: {output}")
         except Exception as e:
@@ -76,7 +74,7 @@ def run_web_fetch(url: str):
                 title_match = re.search(r"<title>(.*?)</title>", result, re.I)
                 title = title_match.group(1)[:50] if title_match else "untitled"
                 safe_title = sanitize_filename(title)
-                output = WEBNOTES_DIR / f"{safe_title}.md"
+                output = OUTPUT_DIR / f"{safe_title}.md"
                 output.write_text(result)
                 print(f"✅ Web page saved to: {output}")
             else:
@@ -91,7 +89,7 @@ def run_web_fetch(url: str):
                 title_match = re.search(r"<title>(.*?)</title>", result, re.I)
                 title = title_match.group(1)[:50] if title_match else "untitled"
                 safe_title = sanitize_filename(title)
-                output = WEBNOTES_DIR / f"{safe_title}.md"
+                output = OUTPUT_DIR / f"{safe_title}.md"
                 output.write_text(result)
                 print(f"✅ Web page saved to: {output}")
             else:
