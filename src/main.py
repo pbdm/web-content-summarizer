@@ -137,6 +137,7 @@ def process_pipeline(args):
     print("\n" + "=" * 60)
     print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
     print("Please read the transcript above and generate a summary note.")
+    print("CRITICAL: You MUST first read and strictly follow the formatting rules in `PROMPT.md` (located in the project root) before generating your response.")
     print("Note: Saving to Obsidian WebNotes/ directory.")
     print("=" * 60 + "\n")
 
