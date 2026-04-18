@@ -1,48 +1,19 @@
 # Web Content Summarizer - Agent 记忆
 
-## 项目概述
+*本项目的大部分指令、参数和处理流程已沉淀至 `SKILL.md` 中。此处仅保留项目级别的上下文补充。*
 
-从互联网提取内容（B站视频、网页文章、PDF）并生成知识笔记。
+## 硬件自适应说明
 
-## 核心功能
-
-- **B站视频转录**: Whisper/FunASR ASR 转录 + Bilibili API fallback
-- **网页文章提取**: defuddle → web_fetch 回退
-- **PDF 解析**: web_fetch PDF 模式
-
-## 输出路径
-
-- B站视频笔记 → `/mnt/c/code/others/content/BiliNotes/`
-- 网页/PDF 笔记 → `/mnt/c/code/others/content/WebNotes/`
-
-## 快速开始
-
-```bash
-# B站视频转录
-./venv/bin/python3 src/transcribe_url.py <B站URL>
-
-# 网页/PDF 总结
-# 使用 defuddle 或 web_fetch 提取内容后按 PROMPT.md 模板生成笔记
-```
-
-## 关键参数
-
-- `--engine`: whisper / funasr
-- `--model`: base, large-v3 等
-- `--fast`: 高性能模式
-
-## 硬件自适应
-
-- **GPU**: large-v3 + float16
-- **CPU**: base + int8
+- **GPU**: 推荐配置为 `large-v3` + `float16`
+- **CPU**: 推荐配置为 `base` + `int8`
 
 ## 目录结构
 
-```
+```text
 web-content-summarizer/
-├── SKILL.md        ← Skill 定义
-├── PROMPT.md       ← 总结模板
-├── AGENTS.md       ← 本文件
+├── SKILL.md        ← Skill 定义（包含核心处理流程、参数和使用方式）
+├── PROMPT.md       ← 笔记总结模板（包含输出的 Markdown 格式要求）
+├── AGENTS.md       ← 本文件（项目上下文补遗）
 ├── src/            ← 源代码
 │   ├── main.py
 │   ├── transcribe_url.py

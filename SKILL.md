@@ -54,12 +54,12 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 ### B站视频
 
-1. **下载音频** → 2. **提取 16k WAV** → 3. **Whisper 转录** → 4. **生成笔记**
+1. **下载音频** → 2. **提取 16k WAV** → 3. **Whisper 转录** → 4. **生成笔记（严格按照当前目录下的 `PROMPT.md` 模板生成最终 Markdown 文件）**
 
 ### 网页文章
 
-1. **defuddle 提取** → 2. **失败则 web_fetch 回退** → 3. **生成笔记**
+1. **defuddle 提取** → 2. **失败则 web_fetch 回退** → 3. **生成笔记（严格按照当前目录下的 `PROMPT.md` 模板生成最终 Markdown 文件）**
 
 ### PDF
 
-1. **web_fetch PDF 解析** → 2. **生成笔记**
+1. **web_fetch PDF 解析** → 2. **生成笔记（严格按照当前目录下的 `PROMPT.md` 模板生成最终 Markdown 文件）**
