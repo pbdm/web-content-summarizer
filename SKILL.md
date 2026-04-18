@@ -17,8 +17,7 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 ## 输出路径
 
-- B站视频 → `/mnt/c/code/others/content/BiliNotes/`
-- 网页/PDF → `/mnt/c/code/others/content/WebNotes/`
+- 所有内容（B站视频/网页/PDF）统一输出至 → `/mnt/c/code/others/content/WebNotes/`
 
 ## 使用方式
 
