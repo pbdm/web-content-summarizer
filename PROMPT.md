@@ -10,7 +10,7 @@
    - 其他 → 网页文章提取
 
 2. **输出路径**：
-   - 所有内容类型 → `/mnt/c/code/others/content/WebNotes/`
+   - 所有内容类型 → `/mnt/c/code/others/content/`
 
 3. **命名规范**：
    - B站视频：`[UP主名称]-[原文件名].md`
@@ -32,6 +32,7 @@ source: {{url}}
 author: {{uploader}}
 tags:
   - bilibili
+  - WebNotes
   - {{keyword1}}
 ---
 
@@ -78,6 +79,7 @@ source: {{url}}
 author: {{author/organization}}
 tags:
   - web-article
+  - WebNotes
   - {{keyword1}}
   - {{keyword2}}
 ---
