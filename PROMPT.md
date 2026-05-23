@@ -77,6 +77,7 @@ published: {{publish_date}}
 source: {{url}}
 author: {{author/organization}}
 tags:
+  - web-article
   - WebNotes
   - {{keyword1}}
   - {{keyword2}}
