@@ -23,7 +23,7 @@ class MarkdownFormatter:
             f.write(f"published: {upload_date}\n")
             f.write(f"source: {source_url}\n")
             f.write(f"author: {uploader}\n")
-            f.write("tags:\n  - bilibili\n  - transcript\n  - inbox\n")
+            f.write("tags:\n  - transcript\n  - inbox\n")
             f.write("---\n\n")
             
             # 2. 写入标题

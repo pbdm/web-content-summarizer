@@ -31,7 +31,6 @@ published: {{upload_date}}
 source: {{url}}
 author: {{uploader}}
 tags:
-  - bilibili
   - WebNotes
   - {{keyword1}}
 ---
