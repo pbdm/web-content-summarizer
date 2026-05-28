@@ -7,6 +7,14 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 将任意 URL 转化为结构化知识笔记。
 
+## 核心模板
+
+> **所有内容类型的笔记生成都必须严格遵循 `PROMPT.md` 模板。**
+>
+> - **路径**：`/home/bopeng/c/web-content-summarizer/PROMPT.md`（本项目根目录，非你当前工作目录）
+> - **作用**：定义输出格式、frontmatter 结构、内容组织规范
+> - **调用时机**：在生成任何笔记前，必须先读取此文件
+
 ## 支持内容
 
 | URL 类型 | 处理方式 |
@@ -53,13 +61,10 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 ## 处理流程
 
 ### B站视频
-
-1. **下载音频** → 2. **提取 16k WAV** → 3. **Whisper 转录** → 4. **生成笔记（你必须先调用 `read_file` 阅读项目根目录下的 `PROMPT.md`，并严格按照其要求生成 Markdown 文件）**
+1. 下载音频 → 2. 提取 16k WAV → 3. Whisper 转录 → 4. 读取 `PROMPT.md` → 5. 生成笔记
 
 ### 网页文章
-
-1. **defuddle 提取** → 2. **失败则 web_fetch 回退** → 3. **生成笔记（你必须先调用 `read_file` 阅读项目根目录下的 `PROMPT.md`，并严格按照其要求生成 Markdown 文件）**
+1. defuddle 提取 → 2. 失败则 web_fetch 回退 → 3. 读取 `PROMPT.md` → 4. 生成笔记
 
 ### PDF
-
-1. **web_fetch PDF 解析** → 2. **生成笔记（你必须先调用 `read_file` 阅读项目根目录下的 `PROMPT.md`，并严格按照其要求生成 Markdown 文件）**
+1. web_fetch PDF 解析 → 2. 读取 `PROMPT.md` → 3. 生成笔记

@@ -16,3 +16,4 @@ config.json
 *.wav
 cookies.txt
 .playwright-cli/
+.opencode/
