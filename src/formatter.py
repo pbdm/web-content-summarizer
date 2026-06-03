@@ -19,7 +19,7 @@ class MarkdownFormatter:
         clean_url = source_url.split("?")[0] if "?" in source_url else source_url
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("---\n")
-            f.write(f"created: {current_time}\n")
+            f.write(f"pubDate: {current_time}\n")
             f.write(f"published: {upload_date}\n")
             f.write(f"source: {source_url}\n")
             f.write(f"author: {uploader}\n")

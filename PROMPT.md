@@ -26,7 +26,7 @@
 
 ```markdown
 ---
-created: {{date}}
+pubDate: {{date}}
 published: {{upload_date}}
 source: {{url}}
 author: {{uploader}}
@@ -72,7 +72,7 @@ tags:
 ```markdown
 ---
 type: article-summary
-created: {{date}}
+pubDate: {{date}}
 published: {{publish_date}}
 source: {{url}}
 author: {{author/organization}}
