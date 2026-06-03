@@ -25,7 +25,7 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 ## 输出路径
 
-- 所有内容（B站视频/网页/PDF）统一输出至 → `/mnt/c/code/others/content/`
+- 所有内容（B站视频/网页/PDF）统一输出至 → `/mnt/c/code/astro-blog-starter-template/src/content/blog`
 - 每个生成的 Markdown 文件都必须在前言 (`---`) 的 `tags` 中包含 `- WebNotes`
 
 ## 使用方式

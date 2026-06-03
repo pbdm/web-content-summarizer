@@ -10,7 +10,7 @@
    - 其他 → 网页文章提取
 
 2. **输出路径**：
-   - 所有内容类型 → `/mnt/c/code/others/content/`
+   - 所有内容类型 → `/mnt/c/code/astro-blog-starter-template/src/content/blog`
 
 3. **命名规范**：
    - B站视频：`[UP主名称]-[原文件名].md`
