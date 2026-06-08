@@ -20,7 +20,7 @@ from src.config import (
     DEFAULT_NUM_WORKERS,
     DEFAULT_MODEL_SIZE,
 )
-from src.logger import logger
+from src.logger import logger, safe_print
 from src.utils import time_it
 
 
@@ -132,14 +132,16 @@ def process_pipeline(args):
         uploader=uploader,
         upload_date=upload_date,
     )
-    print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
+    safe_print(f"TRANSCRIPT_SAVED: {local_md_path.absolute()}")
 
-    print("\n" + "=" * 60)
-    print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
-    print("Please read the transcript above and generate a summary note.")
-    print("CRITICAL: You MUST first read and strictly follow the formatting rules in `PROMPT.md` (located in the project root) before generating your response.")
-    print("Note: Saving to Obsidian / directory.")
-    print("=" * 60 + "\n")
+    safe_print("\n" + "=" * 60)
+    safe_print("🚀 [ACTION REQUIRED] Agent Skill Triggered")
+    safe_print("Please read the transcript above and generate a summary note.")
+    safe_print(
+        "CRITICAL: You MUST first read and strictly follow the formatting rules in `PROMPT.md` (located in the project root) before generating your response."
+    )
+    safe_print("Note: Saving to Obsidian / directory.")
+    safe_print("=" * 60 + "\n")
 
     # 5. 清理临时文件
     if media_path and media_path.exists():

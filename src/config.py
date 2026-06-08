@@ -1,4 +1,7 @@
 import json
+import os
+import shutil
+import sys
 from pathlib import Path
 
 # 项目根目录
@@ -17,29 +20,42 @@ TMP_REL = PATHS.get("TEMP_DIR", "temp")
 OUTPUT_REL = PATHS.get("OUTPUT_DIR", "output")
 
 BIN_DIR = PROJECT_ROOT / "bin"
-TEMP_DIR = PROJECT_ROOT / TMP_REL
-OUTPUT_DIR = (
-    PROJECT_ROOT / OUTPUT_REL
-    if Path(OUTPUT_REL).is_absolute()
-    else PROJECT_ROOT / OUTPUT_REL
-)
+
+
+def resolve_configured_path(path_value: str, project_root: Path) -> Path:
+    configured_path = Path(path_value).expanduser()
+    if configured_path.is_absolute():
+        return configured_path
+    return project_root / configured_path
+
+
+TEMP_DIR = resolve_configured_path(TMP_REL, PROJECT_ROOT)
+OUTPUT_DIR = resolve_configured_path(OUTPUT_REL, PROJECT_ROOT)
 TRANSCRIPT_DIR = TEMP_DIR / "transcripts"  # 转录文稿存档（临时）
+
+
+def get_platform_executable_name(name: str) -> str:
+    return f"{name}.exe" if os.name == "nt" else name
 
 
 # FFmpeg 路径 - 优先使用项目 bin/ 目录，其次使用系统路径
 def find_ffmpeg(name):
+    executable_name = get_platform_executable_name(name)
+
     if BIN_DIR.exists():
-        path = BIN_DIR / name
+        path = BIN_DIR / executable_name
         if path.exists():
             return path
-    import shutil
 
-    system_path = shutil.which(name)
+    system_path = shutil.which(executable_name) or shutil.which(name)
     if system_path:
         return Path(system_path)
+
+    fallback_path = BIN_DIR / executable_name
     if BIN_DIR.exists():
-        return BIN_DIR / name  # 返回 bin/ 路径，让后续检查失败有明确错误
-    raise FileNotFoundError(f"{name} not found in bin/ or system PATH")
+        return fallback_path  # 返回 bin/ 路径，让后续检查失败有明确错误
+
+    raise FileNotFoundError(f"{executable_name} not found in {BIN_DIR} or system PATH")
 
 
 FFMPEG_PATH = find_ffmpeg("ffmpeg")
@@ -70,5 +86,5 @@ DEFAULT_MODEL_SIZE = "large-v3" if DEFAULT_DEVICE == "cuda" else "base"
 DEFAULT_NUM_WORKERS = 2 if DEFAULT_DEVICE == "cuda" else 4
 
 print(
-    f"DEBUG: Hardware detected: {DEFAULT_DEVICE}, using compute_type: {DEFAULT_COMPUTE_TYPE}"
+    f"DEBUG: Hardware detected: {DEFAULT_DEVICE} on {sys.platform}, using compute_type: {DEFAULT_COMPUTE_TYPE}"
 )

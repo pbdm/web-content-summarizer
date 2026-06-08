@@ -11,7 +11,7 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 > **所有内容类型的笔记生成都必须严格遵循 `PROMPT.md` 模板。**
 >
-> - **路径**：`/home/bopeng/c/web-content-summarizer/PROMPT.md`（本项目根目录，非你当前工作目录）
+> - **路径**：项目根目录下的 `PROMPT.md`
 > - **作用**：定义输出格式、frontmatter 结构、内容组织规范
 > - **调用时机**：在生成任何笔记前，必须先读取此文件
 
@@ -25,17 +25,23 @@ description: 自动提取互联网内容（B站视频、网页文章、PDF）并
 
 ## 输出路径
 
-- 所有内容（B站视频/网页/PDF）统一输出至 → `/mnt/c/code/astro-blog-starter-template/src/content/blog`
+- 所有内容（B站视频/网页/PDF）默认输出至 → 项目根目录下的 `output/`
+- 如需自定义输出目录，可修改项目根目录下的 `paths.json`
 - 每个生成的 Markdown 文件都必须在前言 (`---`) 的 `tags` 中包含 `- WebNotes`
 
 ## 使用方式
 
 ```bash
-# 转录 B站视频
-./venv/bin/python3 src/main.py <B站URL>
+# Linux / macOS
+./venv/bin/python src/main.py <B站URL>
 
-# 或使用简化脚本
-./venv/bin/python3 src/transcribe_url.py <URL>
+# Windows PowerShell
+.\venv\Scripts\python.exe .\src\main.py <B站URL>
+
+# 简化脚本
+./venv/bin/python src/transcribe_url.py <URL>
+# 或
+.\venv\Scripts\python.exe .\src\transcribe_url.py <URL>
 ```
 
 ## 参数

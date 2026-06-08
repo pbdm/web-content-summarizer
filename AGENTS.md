@@ -14,6 +14,9 @@ web-content-summarizer/
 ├── SKILL.md        ← Skill 定义（包含核心处理流程、参数和使用方式）
 ├── PROMPT.md       ← 笔记总结模板（包含输出的 Markdown 格式要求）
 ├── AGENTS.md       ← 本文件（项目上下文补遗）
+├── setup.sh        ← Linux 环境初始化脚本
+├── setup.ps1       ← Windows PowerShell 环境初始化脚本
+├── paths.json      ← 输出目录与临时目录配置
 ├── src/            ← 源代码
 │   ├── main.py
 │   ├── transcribe_url.py
@@ -21,6 +24,8 @@ web-content-summarizer/
 │   ├── audio.py
 │   ├── subtitles.py
 │   └── transcriber.py
+├── bin/            ← FFmpeg / FFprobe 可执行文件
+├── output/         ← 默认输出目录
 ├── temp/           ← 临时文件
 └── venv/           ← 虚拟环境
 ```

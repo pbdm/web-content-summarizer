@@ -9,6 +9,8 @@ venv/
 temp/
 bin/ffmpeg
 bin/ffprobe
+bin/ffmpeg.exe
+bin/ffprobe.exe
 output/
 config.json
 *.mp4

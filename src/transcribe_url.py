@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
+sys.path.insert(0, str(PROJECT_ROOT))
 from src.config import OUTPUT_DIR
 
 
@@ -22,10 +23,21 @@ def extract_bvid(url: str) -> str | None:
     return match.group(0).upper() if match else None
 
 
+def resolve_venv_python() -> Path:
+    candidates = [
+        PROJECT_ROOT / "venv" / "Scripts" / "python.exe",
+        PROJECT_ROOT / "venv" / "bin" / "python3",
+        PROJECT_ROOT / "venv" / "bin" / "python",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return Path(sys.executable)
+
+
 def run_bilibili(url, engine="whisper", model="large-v3", fast=False):
     """B站视频转录"""
-    venv_python = PROJECT_ROOT / "venv" / "bin" / "python3"
-    python_exe = str(venv_python) if venv_python.exists() else sys.executable
+    python_exe = str(resolve_venv_python())
     main_py = PROJECT_ROOT / "src" / "main.py"
 
     cmd = [python_exe, str(main_py), url, "--engine", engine]
